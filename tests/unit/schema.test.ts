@@ -24,7 +24,8 @@ describe("RawAnalysisSchema", () => {
   });
 
   it("rejects a missing jobTitle", () => {
-    const { jobTitle: _omit, ...rest } = structuredClone(fixture);
+    const rest: Partial<typeof fixture> = structuredClone(fixture);
+    delete rest.jobTitle;
     expect(RawAnalysisSchema.safeParse(rest).success).toBe(false);
   });
 });

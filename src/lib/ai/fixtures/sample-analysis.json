@@ -1,0 +1,29 @@
+{
+  "jobTitle": "Junior Web Developer",
+  "company": "Acme Digital",
+  "requirements": [
+    {
+      "skill": "React",
+      "importance": "required",
+      "status": "matched",
+      "evidence": "Built MediSched with React and TypeScript"
+    },
+    {
+      "skill": "PostgreSQL",
+      "importance": "required",
+      "status": "partial",
+      "evidence": "Used PostgreSQL exclusion constraints"
+    },
+    {
+      "skill": "Docker",
+      "importance": "nice_to_have",
+      "status": "missing",
+      "evidence": null
+    }
+  ],
+  "suggestions": [
+    "Move your React projects to the top of the resume.",
+    "Add a line about the tests you wrote for MediSched."
+  ],
+  "coverLetter": "Dear Hiring Team,\n\nI am applying for the Junior Web Developer role at Acme Digital. I recently earned a BS in Computer Science and have built and deployed web applications with React, TypeScript and PostgreSQL. In my MediSched project I prevented double bookings with a PostgreSQL exclusion constraint and wrote unit tests for the booking flow. I would welcome the chance to bring this care for correct, tested software to your team.\n\nSincerely,\nJuan Dela Cruz"
+}
