@@ -91,3 +91,37 @@ describe("verifyEvidence", () => {
     expect(input).toEqual(snapshot);
   });
 });
+
+describe("verifyEvidence hardening (final review)", () => {
+  it("does not verify a trivial quote such as 'and'", () => {
+    const out = verifyEvidence(base([{ skill: "Kubernetes", importance: "required", status: "matched", evidence: "and" }]), resume);
+    expect(out.requirements[0].evidenceVerified).toBe(false);
+    expect(out.requirements[0].status).not.toBe("matched");
+  });
+
+  it("matches on word boundaries: 'Java' is not found inside 'JavaScript'", () => {
+    const js = "Juan Dela Cruz\nBuilt dashboards with JavaScript and React for three clients.";
+    const out = verifyEvidence(base([{ skill: "Java", importance: "required", status: "matched", evidence: "Built dashboards with Java" }]), js);
+    expect(out.requirements[0].evidenceVerified).toBe(false);
+  });
+
+  it("caps a real but unrelated quote at partial", () => {
+    const out = verifyEvidence(
+      base([{ skill: "Kubernetes", importance: "required", status: "matched", evidence: "Used PostgreSQL exclusion constraints" }]),
+      resume,
+    );
+    expect(out.requirements[0]).toMatchObject({ status: "partial", evidenceVerified: false });
+  });
+
+  it("keeps the best verified duplicate regardless of order", () => {
+    const out = verifyEvidence(
+      base([
+        { skill: "React", importance: "nice_to_have", status: "missing", evidence: null },
+        { skill: "React.js", importance: "required", status: "matched", evidence: "Built MediSched with React and" },
+      ]),
+      resume,
+    );
+    expect(out.requirements).toHaveLength(1);
+    expect(out.requirements[0]).toMatchObject({ importance: "required", status: "matched", evidenceVerified: true });
+  });
+});
