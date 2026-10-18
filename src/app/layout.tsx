@@ -18,7 +18,9 @@ export const metadata: Metadata = {
     title: "ResuMatch",
     description: "See how your resume matches the job, with evidence from your own resume.",
     type: "website",
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "ResuMatch: see how your resume matches the job" }],
   },
+  twitter: { card: "summary_large_image", images: ["/og.png"] },
 };
 
 export const viewport: Viewport = {
@@ -41,9 +43,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <header className="border-b border-line bg-surface/80 backdrop-blur">
           <nav className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3 sm:px-6" aria-label="Main">
             <Link href="/" className="flex min-h-11 items-center gap-2 font-heading text-lg font-bold text-ink">
-              <span aria-hidden="true" className="grid size-8 place-items-center rounded-lg bg-primary text-primary-ink">
-                R
-              </span>
+              {/* eslint-disable-next-line @next/next/no-img-element -- tiny static SVG mark */}
+              <img src="/favicon.svg" alt="" width={32} height={32} className="size-8" />
               ResuMatch
             </Link>
             <Link
