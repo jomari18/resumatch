@@ -7,7 +7,7 @@ import { getStores } from "@/lib/store";
 /** Builds the share handlers from the environment; a configuration problem becomes a 503, not an HTML 500. */
 export async function shareHandlersFromEnv(): Promise<ReturnType<typeof createShareHandlers> | Response> {
   try {
-    const config = getServerConfig();
+    const config = getServerConfig(process.env, { scope: "store" });
     const { shares } = await getStores(config);
     return createShareHandlers({ shares, config });
   } catch (error) {

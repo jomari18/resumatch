@@ -53,8 +53,15 @@ function secret(env: NodeJS.ProcessEnv, name: string): string {
   return v;
 }
 
-/** Reads and validates server configuration (spec section 12). Throws ConfigError on any problem. */
-export function getServerConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
+/**
+ * Reads and validates server configuration (spec section 12). Throws ConfigError on any problem.
+ * scope "store" is for the share paths: they never call the AI, so a missing AI key must not break them.
+ */
+export function getServerConfig(
+  env: NodeJS.ProcessEnv = process.env,
+  opts: { scope?: "all" | "store" } = {},
+): ServerConfig {
+  const needsAi = opts.scope !== "store";
   const aiProvider = oneOf(env, "AI_PROVIDER", ["gemini", "fake"] as const, "gemini");
   const store = oneOf(env, "STORE", ["supabase", "memory"] as const, "supabase");
 
@@ -66,7 +73,7 @@ export function getServerConfig(env: NodeJS.ProcessEnv = process.env): ServerCon
   return {
     aiProvider,
     fakeAiMode: oneOf(env, "FAKE_AI_MODE", FAKE_MODES, "ok"),
-    geminiApiKey: aiProvider === "gemini" ? required(env, "GEMINI_API_KEY") : value(env, "GEMINI_API_KEY"),
+    geminiApiKey: needsAi && aiProvider === "gemini" ? required(env, "GEMINI_API_KEY") : value(env, "GEMINI_API_KEY"),
     geminiModel: value(env, "GEMINI_MODEL") ?? "gemini-3.8-flash",
     aiTimeoutMs: positiveInt(env, "AI_TIMEOUT_MS", 20000),
     store,

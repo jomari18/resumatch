@@ -18,7 +18,7 @@ const dateFormat = new Intl.DateTimeFormat("en-PH", { dateStyle: "long", timeZon
 export default async function SharedPage({ params }: PageProps<"/r/[id]">) {
   await connection();
   const { id } = await params;
-  const { shares } = await getStores(getServerConfig());
+  const { shares } = await getStores(getServerConfig(process.env, { scope: "store" }));
   const view = await loadShared(id, shares);
   if (!view) notFound();
 

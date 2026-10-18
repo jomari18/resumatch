@@ -49,3 +49,10 @@ describe("getServerConfig", () => {
     expect(config.supabaseUrl).toBeNull();
   });
 });
+
+describe("getServerConfig store scope", () => {
+  it("does not require the AI key when only the store is needed", () => {
+    const config = getServerConfig({ ...required, GEMINI_API_KEY: "" }, { scope: "store" });
+    expect(config.store).toBe("supabase");
+  });
+});
