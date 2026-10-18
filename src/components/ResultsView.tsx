@@ -24,6 +24,8 @@ function Card({ title, children }: { title: string; children: ReactNode }) {
 export function ResultsView(props: Props) {
   const { analysis, score, band, orb } = props;
   const matched = analysis.requirements.filter((r) => r.status === "matched").length;
+  // The shared page has no other heading; on the analyze page the page title is the h1.
+  const Title = props.mode === "shared" ? "h1" : "h2";
 
   return (
     <div className="flex flex-col gap-6">
@@ -36,10 +38,10 @@ export function ResultsView(props: Props) {
         </div>
         <div className="flex flex-col gap-2 text-center sm:text-left">
           <p className="text-sm font-medium uppercase tracking-wide text-muted">Match for</p>
-          <h1 className="font-heading text-2xl font-bold text-ink sm:text-3xl">
+          <Title className="font-heading text-2xl font-bold text-ink sm:text-3xl">
             {analysis.jobTitle}
             {analysis.company ? <span className="text-muted"> · {analysis.company}</span> : null}
-          </h1>
+          </Title>
           <p className="text-muted">
             {matched} of {analysis.requirements.length} requirements matched. The score is computed from the requirement
             list, not guessed by the AI.

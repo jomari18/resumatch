@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { JobInput } from "@/components/JobInput";
 import { LoadingSteps } from "@/components/LoadingSteps";
+import { MatchOrb } from "@/components/MatchOrb";
 import { ResultsView } from "@/components/ResultsView";
 import { ResumeInput } from "@/components/ResumeInput";
 import { analyze, type AnalyzeResponse, type ApiError } from "@/lib/client/api";
@@ -90,6 +91,7 @@ export function AnalyzeApp() {
             band={result.band}
             issuedAt={result.issuedAt}
             signature={result.signature}
+            orb={<MatchOrb score={result.score} className="size-56" />}
           />
           <button
             type="button"

@@ -1,71 +1,67 @@
+import Link from "next/link";
 import { connection } from "next/server";
-import Image from "next/image";
+import { MatchOrb } from "@/components/MatchOrb";
+
+const FEATURES = [
+  {
+    title: "Evidence, not guesses",
+    body: "Every matched requirement comes with a quote from your own resume. Quotes that can't be found word-for-word are flagged and scored lower.",
+  },
+  {
+    title: "A score you can trust",
+    body: "The AI lists the job's requirements; the score is calculated by code from that list, so the same analysis always gives the same number.",
+  },
+  {
+    title: "Private by default",
+    body: "Your PDF is read on your device. Resume text is never stored. Share links are optional and expire after 30 days.",
+  },
+];
 
 export default async function Home() {
   await connection();
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="mx-auto flex w-full max-w-5xl flex-col gap-16 px-4 py-12 sm:px-6 sm:py-16">
+      <section className="grid items-center gap-10 md:grid-cols-[1.1fr_0.9fr]">
+        <div className="flex flex-col gap-6">
+          <p className="w-fit rounded-full bg-accent-soft px-3 py-1 text-sm font-semibold text-accent">
+            For fresh graduates and job seekers
           </p>
+          <h1 className="font-heading text-4xl font-bold leading-tight text-ink sm:text-5xl">
+            See how your resume really matches the job.
+          </h1>
+          <p className="max-w-xl text-lg text-muted">
+            Paste a job posting and your resume. ResuMatch shows which requirements you meet, with proof from your resume,
+            gives honest suggestions, and drafts a cover letter that only uses facts you actually have.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/analyze"
+              className="min-h-12 content-center rounded-xl bg-primary px-6 text-lg font-semibold text-primary-ink shadow-sm hover:opacity-90"
+            >
+              Analyze my resume
+            </Link>
+            <a href="#how" className="min-h-12 content-center rounded-xl border border-line px-6 font-semibold text-ink hover:bg-line/50">
+              How it works
+            </a>
+          </div>
+          <p className="text-sm text-muted">Free · No account · 10 analyses per day</p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="grid place-items-center">
+          <MatchOrb score={null} className="size-64 sm:size-80" />
         </div>
-      </main>
-    </div>
+      </section>
+
+      <section id="how" className="flex scroll-mt-20 flex-col gap-6">
+        <h2 className="font-heading text-2xl font-bold text-ink">How it works</h2>
+        <div className="grid gap-4 md:grid-cols-3">
+          {FEATURES.map((f) => (
+            <article key={f.title} className="flex flex-col gap-2 rounded-2xl border border-line bg-surface p-6 shadow-sm">
+              <h3 className="font-heading text-lg font-semibold text-ink">{f.title}</h3>
+              <p className="text-muted">{f.body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+    </main>
   );
 }
