@@ -13,5 +13,9 @@ export async function getStores(config: ServerConfig): Promise<Stores> {
     cache.__resumatchMemoryStores ??= createMemoryStores();
     return cache.__resumatchMemoryStores;
   }
-  throw new Error("The Supabase store is added in Task 8");
+  if (!config.supabaseUrl || !config.supabaseSecretKey) {
+    throw new Error("SUPABASE_URL and SUPABASE_SECRET_KEY are required for the Supabase store");
+  }
+  const { createSupabaseStores } = await import("@/lib/store/supabase");
+  return createSupabaseStores({ url: config.supabaseUrl, secretKey: config.supabaseSecretKey });
 }
