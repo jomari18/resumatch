@@ -12,8 +12,9 @@ export async function extractPdfText(file: File): Promise<PdfResult> {
   const pdfjs = await import("pdfjs-dist");
   pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
 
+  const loadingTask = pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) });
   try {
-    const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+    const doc = await loadingTask.promise;
     let text = "";
     for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber++) {
       const page = await doc.getPage(pageNumber);
@@ -23,11 +24,12 @@ export async function extractPdfText(file: File): Promise<PdfResult> {
       }
       text += "\n";
     }
-    await doc.destroy();
     if (text.replace(/\s/g, "").length < MIN_TEXT_CHARS) return { ok: false, reason: "no_text" };
     return { ok: true, text };
   } catch (error) {
     if ((error as { name?: string })?.name === "PasswordException") return { ok: false, reason: "encrypted" };
     return { ok: false, reason: "unreadable" };
+  } finally {
+    await loadingTask.destroy();
   }
 }
