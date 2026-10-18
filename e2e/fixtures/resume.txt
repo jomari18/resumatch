@@ -1,0 +1,17 @@
+Juan Dela Cruz
+Junior Web Developer | Quezon City, Philippines
+
+SUMMARY
+Computer Science graduate who builds and deploys full-stack web applications.
+
+PROJECTS
+MediSched - Clinic appointment booking
+• Built MediSched with React and TypeScript
+• Used PostgreSQL exclusion constraints to prevent double bookings
+• Wrote unit tests for the booking flow
+
+SKILLS
+React, TypeScript, JavaScript, HTML, CSS, PostgreSQL, Git
+
+EDUCATION
+BS Computer Science, 2026

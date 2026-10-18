@@ -29,10 +29,14 @@ export function AnalyzeApp() {
   const [phase, setPhase] = useState<Phase>("input");
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
+  const [hydrated, setHydrated] = useState(false);
   const inFlight = useRef(false);
   const topRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Marks the form as interactive (used by E2E tests to avoid typing before hydration).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHydrated(true);
     const saved = restore();
     if (saved) {
       // Restoring from sessionStorage can only happen after mount (the server has no session).
@@ -102,7 +106,7 @@ export function AnalyzeApp() {
           </button>
         </>
       ) : (
-        <form onSubmit={submit} noValidate className="flex flex-col gap-8">
+        <form onSubmit={submit} noValidate data-ready={hydrated} className="flex flex-col gap-8">
           <ResumeInput value={resume} onChange={setResume} serverError={fieldError("resumeText")} />
           <JobInput value={job} onChange={setJob} serverError={fieldError("jobText")} />
 
