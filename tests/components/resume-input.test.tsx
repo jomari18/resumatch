@@ -2,7 +2,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ResumeInput } from "@/components/ResumeInput";
 
 function Harness() {
@@ -38,5 +38,23 @@ describe("ResumeInput", () => {
     expect(screen.queryByText(/at least 200/)).not.toBeInTheDocument();
     await user.tab();
     expect(screen.getByText("Resume must be at least 200 characters.")).toBeInTheDocument();
+  });
+});
+
+describe("ResumeInput PDF failures", () => {
+  it("shows the can't-open message and re-enables the file input when reading throws", async () => {
+    vi.doMock("@/lib/pdf/extract-text", () => ({
+      extractPdfText: async () => {
+        throw new Error("chunk failed");
+      },
+    }));
+    const user = userEvent.setup();
+    render(<Harness />);
+    await user.click(screen.getByRole("tab", { name: "Upload PDF" }));
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(input, new File(["%PDF-1.4"], "cv.pdf", { type: "application/pdf" }));
+    expect(await screen.findByText("This PDF can't be opened here. Use a text-based PDF under 5 MB, or paste your resume.")).toBeInTheDocument();
+    expect(input).toBeEnabled();
+    vi.doUnmock("@/lib/pdf/extract-text");
   });
 });

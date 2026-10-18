@@ -16,7 +16,14 @@ async function request<T>(url: string, init: RequestInit, parse: (res: Response)
   } catch {
     return { ok: false, error: { code: "network", message: MESSAGES.offline } };
   }
-  if (res.ok) return { ok: true, data: await parse(res) };
+  if (res.ok) {
+    try {
+      return { ok: true, data: await parse(res) };
+    } catch {
+      // A 200 with a body we cannot read (captive portal, truncated proxy response).
+      return { ok: false, error: { code: "service_unavailable", message: MESSAGES.busy } };
+    }
+  }
   try {
     const body = (await res.json()) as ApiErrorBody;
     if (body?.error?.code) return { ok: false, error: body.error };

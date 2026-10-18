@@ -8,9 +8,11 @@ import { ResultsView } from "@/components/ResultsView";
 import { ResumeInput } from "@/components/ResumeInput";
 import { analyze, type AnalyzeResponse, type ApiError } from "@/lib/client/api";
 import { STORAGE_KEYS, safeGet, safeRemove, safeSet } from "@/lib/client/storage";
+import { MESSAGES } from "@/lib/http";
 import { checkLength } from "@/lib/input";
 
 type Phase = "input" | "loading" | "results";
+type Field = "resumeText" | "jobText";
 
 function restore(): AnalyzeResponse | null {
   const raw = safeGet("session", STORAGE_KEYS.lastResult);
@@ -23,6 +25,14 @@ function restore(): AnalyzeResponse | null {
   }
 }
 
+const prefersReducedMotion = () => {
+  try {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  } catch {
+    return false;
+  }
+};
+
 export function AnalyzeApp() {
   const [resume, setResume] = useState("");
   const [job, setJob] = useState("");
@@ -31,48 +41,68 @@ export function AnalyzeApp() {
   const [error, setError] = useState<ApiError | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const inFlight = useRef(false);
+  const justSubmitted = useRef(false);
   const topRef = useRef<HTMLDivElement>(null);
+  const alertRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Marks the form as interactive (used by E2E tests to avoid typing before hydration).
+    // Marks the form as interactive (used by E2E tests) and restores a result after a refresh.
+    // Both can only happen after mount: the server has no sessionStorage.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setHydrated(true);
     const saved = restore();
     if (saved) {
-      // Restoring from sessionStorage can only happen after mount (the server has no session).
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setResult(saved);
       setPhase("results");
     }
   }, []);
+
+  useEffect(() => {
+    if (phase !== "results" || !justSubmitted.current) return;
+    justSubmitted.current = false;
+    // Move keyboard and screen-reader focus to the new content instead of leaving it on <body>.
+    document.getElementById("results-title")?.focus();
+    topRef.current?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+  }, [phase]);
+
+  useEffect(() => {
+    if (error && !error.field) alertRef.current?.focus();
+  }, [error]);
+
+  function edit(field: Field, value: string) {
+    if (field === "resumeText") setResume(value);
+    else setJob(value);
+    setError((current) => (current?.field === field ? null : current));
+  }
 
   async function submit(e?: FormEvent) {
     e?.preventDefault();
     if (inFlight.current) return;
     const resumeCheck = checkLength("resume", resume);
     const jobCheck = checkLength("job", job);
-    if (!resumeCheck.ok || !jobCheck.ok) {
-      const field = !resumeCheck.ok ? "resumeText" : "jobText";
-      const message = !resumeCheck.ok ? resumeCheck.message : (jobCheck as { message: string }).message;
-      setError({ code: "invalid_input", message, field });
-      return;
-    }
+    if (!resumeCheck.ok) return setError({ code: "invalid_input", message: resumeCheck.message, field: "resumeText" });
+    if (!jobCheck.ok) return setError({ code: "invalid_input", message: jobCheck.message, field: "jobText" });
 
     inFlight.current = true;
     setError(null);
     setPhase("loading");
-    const response = await analyze({ resumeText: resume, jobText: job });
-    inFlight.current = false;
-
-    if (!response.ok) {
-      setError(response.error);
+    try {
+      const response = await analyze({ resumeText: resume, jobText: job });
+      if (!response.ok) {
+        setError(response.error);
+        setPhase("input");
+        return;
+      }
+      safeSet("session", STORAGE_KEYS.lastResult, JSON.stringify(response.data));
+      justSubmitted.current = true;
+      setResult(response.data);
+      setPhase("results");
+    } catch {
+      setError({ code: "service_unavailable", message: MESSAGES.busy });
       setPhase("input");
-      return;
+    } finally {
+      inFlight.current = false;
     }
-    safeSet("session", STORAGE_KEYS.lastResult, JSON.stringify(response.data));
-    setResult(response.data);
-    setPhase("results");
-    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function startOver() {
@@ -81,8 +111,9 @@ export function AnalyzeApp() {
     setPhase("input");
   }
 
-  const fieldError = (field: string) => (error?.code === "invalid_input" && error.field === field ? error.message : undefined);
+  const fieldError = (field: Field) => (error?.code === "invalid_input" && error.field === field ? error.message : undefined);
   const generalError = error && !(error.code === "invalid_input" && error.field) ? error : null;
+  const loading = phase === "loading";
 
   return (
     <div ref={topRef} className="flex scroll-mt-6 flex-col gap-6">
@@ -107,12 +138,17 @@ export function AnalyzeApp() {
         </>
       ) : (
         <form onSubmit={submit} noValidate data-ready={hydrated} className="flex flex-col gap-8">
-          <ResumeInput value={resume} onChange={setResume} serverError={fieldError("resumeText")} />
-          <JobInput value={job} onChange={setJob} serverError={fieldError("jobText")} />
+          <ResumeInput value={resume} onChange={(v) => edit("resumeText", v)} serverError={fieldError("resumeText")} />
+          <JobInput value={job} onChange={(v) => edit("jobText", v)} serverError={fieldError("jobText")} />
 
           <div aria-live="polite">
             {generalError && (
-              <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl bg-danger-soft p-4 text-danger">
+              <div
+                ref={alertRef}
+                role="alert"
+                tabIndex={-1}
+                className="flex flex-wrap items-center gap-3 rounded-xl bg-danger-soft p-4 text-danger focus:outline-none"
+              >
                 <p className="font-medium">{generalError.message}</p>
                 {generalError.code !== "ip_limit" && generalError.code !== "global_limit" && (
                   <button
@@ -127,17 +163,17 @@ export function AnalyzeApp() {
             )}
           </div>
 
-          {phase === "loading" ? (
-            <LoadingSteps />
-          ) : (
+          <div className="flex flex-col gap-4">
             <button
               type="submit"
-              disabled={phase !== "input"}
+              disabled={loading}
+              aria-busy={loading}
               className="min-h-12 self-start rounded-xl bg-primary px-8 text-lg font-semibold text-primary-ink shadow-sm hover:opacity-90 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
-              Analyze
+              {loading ? "Analyzing…" : "Analyze"}
             </button>
-          )}
+            {loading && <LoadingSteps />}
+          </div>
         </form>
       )}
     </div>

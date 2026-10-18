@@ -38,7 +38,7 @@ export function ResultsView(props: Props) {
         </div>
         <div className="flex flex-col gap-2 text-center sm:text-left">
           <p className="text-sm font-medium uppercase tracking-wide text-muted">Match for</p>
-          <Title className="font-heading text-2xl font-bold text-ink sm:text-3xl">
+          <Title id="results-title" tabIndex={-1} className="font-heading text-2xl font-bold text-ink focus:outline-none sm:text-3xl">
             {analysis.jobTitle}
             {analysis.company ? <span className="text-muted"> · {analysis.company}</span> : null}
           </Title>

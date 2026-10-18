@@ -46,7 +46,12 @@ export function createSupabaseStores(opts: {
   const rateLimits: RateLimitStore = {
     async consume(ipHash, perIpLimit, globalLimit) {
       const params = { p_ip_hash: ipHash, p_ip_limit: perIpLimit, p_global_limit: globalLimit };
-      return (await call(() => client.rpc("consume_quota", params), "consume_quota")) as QuotaResult;
+      const result = await call(() => client.rpc("consume_quota", params), "consume_quota");
+      // Fail closed: anything other than the three known answers must not let a request through.
+      if (result !== "ok" && result !== "ip_limit" && result !== "global_limit") {
+        throw new StoreUnavailableError("consume_quota returned an unexpected value");
+      }
+      return result satisfies QuotaResult;
     },
   };
 

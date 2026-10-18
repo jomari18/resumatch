@@ -98,3 +98,12 @@ describe("Supabase ShareStore", () => {
     expect(rpcCalls[0]).toEqual({ fn: "delete_share", params: { p_id: "abcdefghijkl", p_delete_token_hash: "h" } });
   });
 });
+
+describe("Supabase RateLimitStore fails closed", () => {
+  it.each([null, "maybe", 42])("treats an unexpected consume_quota value (%s) as unavailable", async (data) => {
+    const { client } = fakeClient(() => ({ data, error: null }));
+    await expect(createSupabaseStores({ ...opts, client }).rateLimits.consume("h", 1, 1)).rejects.toBeInstanceOf(
+      StoreUnavailableError,
+    );
+  });
+});

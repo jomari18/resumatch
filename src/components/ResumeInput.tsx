@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { CountedTextarea } from "@/components/CountedTextarea";
 import { normalizeText } from "@/lib/input";
 
@@ -23,6 +23,12 @@ export function ResumeInput({ value, onChange, serverError }: Props) {
   const [status, setStatus] = useState<{ kind: "idle" | "reading" | "done" | "error"; message?: string }>({ kind: "idle" });
   const tabRefs = useRef<Record<Tab, HTMLButtonElement | null>>({ paste: null, upload: null });
 
+  useEffect(() => {
+    // A resume error is shown in the Paste panel, so make that panel visible.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (serverError) setTab("paste");
+  }, [serverError]);
+
   function select(next: Tab, focus = false) {
     setTab(next);
     if (focus) tabRefs.current[next]?.focus();
@@ -43,8 +49,13 @@ export function ResumeInput({ value, onChange, serverError }: Props) {
   async function onFile(file: File | undefined) {
     if (!file) return;
     setStatus({ kind: "reading", message: `Reading ${file.name}…` });
-    const { extractPdfText } = await import("@/lib/pdf/extract-text");
-    const result = await extractPdfText(file);
+    let result: Awaited<ReturnType<typeof import("@/lib/pdf/extract-text").extractPdfText>>;
+    try {
+      const { extractPdfText } = await import("@/lib/pdf/extract-text");
+      result = await extractPdfText(file);
+    } catch {
+      result = { ok: false, reason: "unreadable" };
+    }
     if (!result.ok) {
       setStatus({ kind: "error", message: result.reason === "no_text" ? PDF_MESSAGES.no_text : PDF_MESSAGES.other });
       return;
