@@ -8,7 +8,7 @@ ResuMatch compares a resume with a job posting and gives an honest match analysi
 
 ## Live Demo
 
-**[Open ResuMatch](https://resumatch.netlify.app)**
+**[Open ResuMatch](https://resumatch-ph.netlify.app)**
 
 ## Highlights
 
