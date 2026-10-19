@@ -19,7 +19,8 @@ ResuMatch compares a resume with a job posting and gives an honest match analysi
 - Duplicate skills from the AI are merged before scoring.
 - Optional share links that expire after 30 days. The owner can delete a link from the same browser.
 - Per-IP (10 per day) and site-wide daily limits, enforced atomically in PostgreSQL.
-- A light 3D match orb (React Three Fiber) that falls back to a static SVG under reduced motion or without WebGL.
+- A floating resume-sheets background (React Three Fiber) that falls back to a static gradient under reduced motion or without WebGL.
+- Light and dark themes: follows the device setting, with a header toggle that is remembered in a cookie.
 - Responsive from 360 px to 1440 px, with light and dark mode and keyboard-accessible tabs.
 
 ## System design
