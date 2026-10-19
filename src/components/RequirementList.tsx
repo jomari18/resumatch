@@ -21,7 +21,7 @@ export function RequirementList({ requirements }: { requirements: Requirement[] 
             </span>
           </div>
           {req.evidence && (
-            <blockquote className="border-l-2 border-line pl-3 text-sm text-muted">
+            <blockquote className="border-l-4 border-accent pl-3 text-sm text-muted">
               “{req.evidence}”
               {!req.evidenceVerified && (
                 <span className="mt-1 block text-xs font-medium text-warning">Not found word-for-word in your resume</span>

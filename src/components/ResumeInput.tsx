@@ -70,7 +70,7 @@ export function ResumeInput({ value, onChange, serverError }: Props) {
       <h2 id={`${baseId}-heading`} className="font-heading text-lg font-semibold text-ink">
         1. Your resume
       </h2>
-      <div role="tablist" aria-label="Resume input method" className="inline-flex w-fit rounded-xl bg-line/60 p-1">
+      <div role="tablist" aria-label="Resume input method" className="glass inline-flex w-fit rounded-xl border border-line p-1">
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -85,7 +85,7 @@ export function ResumeInput({ value, onChange, serverError }: Props) {
             tabIndex={tab === t.id ? 0 : -1}
             onClick={() => select(t.id)}
             onKeyDown={onTabKey}
-            className="min-h-11 rounded-lg px-4 text-sm font-semibold text-muted transition aria-selected:bg-surface aria-selected:text-ink aria-selected:shadow-sm focus-visible:outline-2 focus-visible:outline-primary"
+            className="min-h-11 rounded-lg px-4 text-sm font-semibold text-muted transition aria-selected:bg-ink aria-selected:text-bg focus-visible:outline-2 focus-visible:outline-primary"
           >
             {t.label}
           </button>
@@ -118,7 +118,7 @@ export function ResumeInput({ value, onChange, serverError }: Props) {
         role="tabpanel"
         aria-labelledby={`${baseId}-tab-upload`}
         hidden={tab !== "upload"}
-        className="rounded-xl border-2 border-dashed border-line bg-surface p-6 text-center"
+        className="glass rounded-xl border-2 border-dashed border-line p-6 text-center"
       >
         <label htmlFor={`${baseId}-file`} className="flex cursor-pointer flex-col items-center gap-2">
           <span className="font-heading font-semibold text-ink">Choose a PDF resume</span>

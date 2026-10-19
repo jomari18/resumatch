@@ -1,11 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 import { JOB, RESUME, openAnalyze, uniqueIp } from "./helpers";
 
-test("reduced motion shows the static orb instead of the 3D canvas", async ({ page }) => {
+test("reduced motion shows the static background instead of the 3D sheets", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await expect(page.getByTestId("orb-fallback")).toBeVisible();
-  await expect(page.getByTestId("orb-canvas")).toHaveCount(0);
+  await expect(page.getByTestId("sheets-fallback")).toBeAttached();
+  await expect(page.getByTestId("sheets-canvas")).toHaveCount(0);
 });
 
 async function tabUntil(page: Page, matches: () => Promise<boolean>) {

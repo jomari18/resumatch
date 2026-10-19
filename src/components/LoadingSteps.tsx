@@ -15,7 +15,7 @@ export function LoadingSteps() {
   }, []);
 
   return (
-    <div role="status" aria-live="polite" className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-6">
+    <div role="status" aria-live="polite" className="flex flex-col gap-3 glass rounded-2xl border border-line p-6">
       <p className="sr-only">{STEPS[active]}…</p>
       <ol className="flex flex-col gap-3" aria-hidden="true">
         {STEPS.map((step, i) => (

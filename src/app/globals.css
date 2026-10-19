@@ -1,44 +1,70 @@
 @import "tailwindcss";
 
-/* Brand tokens (spec 10.4): deep teal primary, amber accent, slate neutrals. */
+/* Brand tokens from the design pass: warm paper, ink, blue primary and a highlighter-yellow accent. */
 :root {
-  --bg: #f8fafc;
+  --bg: #fbf8f3;
   --surface: #ffffff;
-  --ink: #0f172a;
-  --muted: #475569;
-  --line: #e2e8f0;
-  --primary: #0f766e;
+  --ink: #1c1b19;
+  --muted: #5f5b54;
+  --line: #e4ddd0;
+  --primary: #1d4ed8;
   --primary-ink: #ffffff;
-  --accent: #b45309;
-  --accent-soft: #fef3c7;
+  --accent: #ffd84d;
+  --accent-ink: #1c1b19;
+  --sheet: #ffffff;
+  --sheet-line: #d9d0bf;
   --success: #15803d;
   --success-soft: #dcfce7;
-  --warning: #a16207;
-  --warning-soft: #fef9c3;
+  --warning: #92400e;
+  --warning-soft: #fef3c7;
   --danger: #b91c1c;
   --danger-soft: #fee2e2;
   color-scheme: light;
 }
 
+/* Dark tokens: the device setting applies unless the visitor picked a theme with the header toggle. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0b1220;
-    --surface: #111a2e;
-    --ink: #e2e8f0;
-    --muted: #94a3b8;
-    --line: #22304d;
-    --primary: #2dd4bf;
-    --primary-ink: #042f2e;
-    --accent: #fbbf24;
-    --accent-soft: #3b2a06;
+  :root:not([data-theme="light"]) {
+    --bg: #14130f;
+    --surface: #1d1b17;
+    --ink: #f4f0e8;
+    --muted: #b2ab9f;
+    --line: #3a362f;
+    --primary: #7da2ff;
+    --primary-ink: #0b1020;
+    --accent: #ffd84d;
+    --accent-ink: #1c1b19;
+    --sheet: #2a2721;
+    --sheet-line: #4a453b;
     --success: #4ade80;
-    --success-soft: #0f2e1a;
-    --warning: #facc15;
-    --warning-soft: #33290a;
+    --success-soft: #11291a;
+    --warning: #fbbf24;
+    --warning-soft: #33270b;
     --danger: #f87171;
-    --danger-soft: #3a1414;
+    --danger-soft: #361414;
     color-scheme: dark;
   }
+}
+
+:root[data-theme="dark"] {
+  --bg: #14130f;
+  --surface: #1d1b17;
+  --ink: #f4f0e8;
+  --muted: #b2ab9f;
+  --line: #3a362f;
+  --primary: #7da2ff;
+  --primary-ink: #0b1020;
+  --accent: #ffd84d;
+  --accent-ink: #1c1b19;
+  --sheet: #2a2721;
+  --sheet-line: #4a453b;
+  --success: #4ade80;
+  --success-soft: #11291a;
+  --warning: #fbbf24;
+  --warning-soft: #33270b;
+  --danger: #f87171;
+  --danger-soft: #361414;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -50,7 +76,7 @@
   --color-primary: var(--primary);
   --color-primary-ink: var(--primary-ink);
   --color-accent: var(--accent);
-  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
@@ -58,21 +84,94 @@
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-heading: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-bricolage), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
 body {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+/* Static background used before the 3D scene loads, under reduced motion, and without WebGL. */
+.sheets-fallback {
+  background:
+    radial-gradient(600px 300px at 80% 20%, color-mix(in srgb, var(--accent) 25%, transparent), transparent), var(--bg);
+}
+
+.sheets-veil {
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--bg) 82%, transparent) 0%,
+    color-mix(in srgb, var(--bg) 55%, transparent) 45%,
+    transparent 75%
+  );
+}
+
+/* On phones the copy spans the full width, so the veil covers it evenly. */
+@media (max-width: 699px) {
+  .sheets-veil {
+    background: color-mix(in srgb, var(--bg) 65%, transparent);
+  }
+}
+
+/* Translucent "paper" card over the floating sheets. */
+.glass {
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+/* Highlighter swipe from the design mockup. */
+.highlight {
+  background: linear-gradient(transparent 55%, var(--accent) 55%);
+  background-size: 0 100%;
+  background-repeat: no-repeat;
+  padding: 0 4px;
+  color: inherit;
+  animation: highlight-swipe 0.8s 0.5s ease forwards;
+}
+
+@keyframes highlight-swipe {
+  to {
+    background-size: 100% 100%;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .highlight {
+    background-size: 100% 100%;
+    animation: none;
+  }
+
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Theme toggle shows a moon in light mode and a sun in dark mode. */
+.theme-icon-sun {
+  display: none;
+}
+
+:root[data-theme="dark"] .theme-icon-sun {
+  display: block;
+}
+
+:root[data-theme="dark"] .theme-icon-moon {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .theme-icon-sun {
+    display: block;
+  }
+
+  :root:not([data-theme="light"]) .theme-icon-moon {
+    display: none;
   }
 }

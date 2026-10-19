@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { MatchOrb } from "@/components/MatchOrb";
 import { ResultsView } from "@/components/ResultsView";
 import { SharedOwnerActions } from "@/components/SharedOwnerActions";
 import { getServerConfig } from "@/lib/config";
@@ -23,7 +22,7 @@ export default async function SharedPage({ params }: PageProps<"/r/[id]">) {
   if (!view) notFound();
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-10 sm:px-6">
+    <main className="mx-auto flex w-full max-w-[1080px] flex-col gap-6 px-4 py-10">
       <p className="text-sm font-medium text-muted">Shared result · expires {dateFormat.format(new Date(view.expiresAt))}</p>
       <SharedOwnerActions id={id} />
       <ResultsView
@@ -31,7 +30,6 @@ export default async function SharedPage({ params }: PageProps<"/r/[id]">) {
         analysis={view.result}
         score={view.score}
         band={view.band}
-        orb={<MatchOrb score={view.score} className="size-56" />}
       />
     </main>
   );

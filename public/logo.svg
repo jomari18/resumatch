@@ -1,13 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 64" role="img" aria-labelledby="t">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 64" role="img" aria-labelledby="t">
   <title id="t">ResuMatch</title>
-  <defs>
-    <radialGradient id="o" cx="38%" cy="32%" r="70%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity=".85"/>
-      <stop offset="40%" stop-color="#0f766e"/>
-      <stop offset="100%" stop-color="#0b5a54"/>
-    </radialGradient>
-  </defs>
-  <circle cx="32" cy="32" r="26" fill="url(#o)"/>
-  <path d="M20 33l8 8 16-17" fill="none" stroke="#f59e0b" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="68" y="42" font-family="Space Grotesk, Inter, Arial, sans-serif" font-size="30" font-weight="700" fill="#0f172a">Resu<tspan fill="#0f766e">Match</tspan></text>
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="#1D4ED8"/>
+  <rect x="17" y="12" width="30" height="40" rx="4" fill="#FFFFFF"/>
+  <rect x="22" y="19" width="16" height="3" rx="1.5" fill="#D9D0BF"/>
+  <rect x="21" y="26" width="22" height="6" rx="2" fill="#FFD84D"/>
+  <rect x="22" y="36" width="20" height="3" rx="1.5" fill="#D9D0BF"/>
+  <rect x="22" y="43" width="13" height="3" rx="1.5" fill="#D9D0BF"/>
+  <text x="72" y="43" font-family="Bricolage Grotesque, Inter, Arial, sans-serif" font-size="32" font-weight="800" fill="#1C1B19">ResuMatch</text>
 </svg>

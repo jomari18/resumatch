@@ -7,7 +7,6 @@ import { AnalyzeApp } from "@/components/AnalyzeApp";
 
 const analyze = vi.fn();
 vi.mock("@/lib/client/api", () => ({ analyze: (...a: unknown[]) => analyze(...a), createShare: vi.fn() }));
-vi.mock("@/components/MatchOrb", () => ({ MatchOrb: () => null }));
 
 const RESUME = readFileSync("src/lib/ai/fixtures/sample-resume.txt", "utf8");
 const JOB = "Junior Web Developer at Acme Digital. Requirements: React, PostgreSQL. Nice to have: Docker. Build web apps.";

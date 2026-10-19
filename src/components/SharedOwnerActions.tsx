@@ -32,7 +32,7 @@ export function SharedOwnerActions({ id }: { id: string }) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-surface p-4">
+    <div className="flex flex-wrap items-center gap-3 glass rounded-2xl border border-line p-4">
       <p className="text-sm text-muted">You created this link. Delete it to remove the shared result now.</p>
       <button
         type="button"
