@@ -74,7 +74,7 @@ export function getServerConfig(
     aiProvider,
     fakeAiMode: oneOf(env, "FAKE_AI_MODE", FAKE_MODES, "ok"),
     geminiApiKey: needsAi && aiProvider === "gemini" ? required(env, "GEMINI_API_KEY") : value(env, "GEMINI_API_KEY"),
-    geminiModel: value(env, "GEMINI_MODEL") ?? "gemini-3.8-flash",
+    geminiModel: value(env, "GEMINI_MODEL") ?? "gemini-3.6-flash",
     aiTimeoutMs: positiveInt(env, "AI_TIMEOUT_MS", 20000),
     store,
     supabaseUrl: store === "supabase" ? required(env, "SUPABASE_URL") : value(env, "SUPABASE_URL"),
