@@ -47,3 +47,6 @@ next-env.d.ts
 /.superpowers/
 /test-results/
 /playwright-report/
+
+# Never commit local notes that may hold secrets
+/*.txt
