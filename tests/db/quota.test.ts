@@ -50,7 +50,7 @@ describe("refund_quota", () => {
       expect((await client.query(consume, ["a", 1, 100])).rows[0].r).toBe("ok");
       await client.query("select public.refund_quota($1)", ["a"]);
       await client.query("select public.refund_quota($1)", ["a"]);
-      const { rows } = await client.query("select ip_hash, count from public.rate_limits order by ip_hash");
+      const { rows } = await client.query("select ip_hash, count from public.rate_limits order by ip_hash collate \"C\"");
       expect(rows).toEqual([
         { ip_hash: "__global__", count: 0 },
         { ip_hash: "a", count: 0 },
