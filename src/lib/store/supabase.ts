@@ -53,6 +53,9 @@ export function createSupabaseStores(opts: {
       }
       return result satisfies QuotaResult;
     },
+    async refund(ipHash) {
+      await call(() => client.rpc("refund_quota", { p_ip_hash: ipHash }), "refund_quota");
+    },
   };
 
   const shares: ShareStore = {

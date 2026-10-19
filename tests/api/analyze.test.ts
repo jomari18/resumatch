@@ -115,6 +115,7 @@ describe("POST /api/analyze", () => {
       consume: async () => {
         throw new StoreUnavailableError("down");
       },
+      refund: async () => {},
     };
     const { handler, calls } = setup(createFakeProvider("ok"), testConfig, down);
     const res = await handler(post());
@@ -174,5 +175,19 @@ describe("POST /api/analyze", () => {
     const broken: AIProvider = { analyze: async () => { calls += 1; throw new AiUnavailableError("Gemini API error 400"); } };
     expect((await setup(broken).handler(post())).status).toBe(503);
     expect(calls).toBe(1);
+  });
+
+  it("does not count attempts that fail because the AI provider is unavailable", async () => {
+    let calls = 0;
+    const flaky: AIProvider = {
+      analyze: async (input, opts) => {
+        calls += 1;
+        if (calls <= 12) throw new AiUnavailableError("Gemini API error 400");
+        return createFakeProvider("ok").analyze(input, opts);
+      },
+    };
+    const { handler } = setup(flaky);
+    for (let i = 0; i < 12; i++) expect((await handler(post())).status).toBe(503);
+    expect((await handler(post())).status).toBe(200);
   });
 });

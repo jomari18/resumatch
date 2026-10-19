@@ -18,6 +18,7 @@ async function reset(client: pg.PoolClient) {
     drop function if exists public.create_share(text, jsonb, text, text, text);
     drop function if exists public.delete_share(text, text);
     drop function if exists public.cleanup_expired();
+    drop function if exists public.refund_quota(text);
   `);
   for (const file of readdirSync(MIGRATIONS).sort()) {
     if (file.endsWith("_cron.sql")) continue;

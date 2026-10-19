@@ -51,14 +51,10 @@ export function createAnalyzeHandler({ provider, rateLimits, config, now = Date.
     throw fail(400, "invalid_input", message, field ? { field } : {});
   }
 
-  async function claimQuota(req: Request) {
+  async function claimQuota(ipHash: string) {
     let result;
     try {
-      result = await rateLimits.consume(
-        hashIp(getClientIp(req.headers), config.ipHashSalt),
-        config.perIpDailyLimit,
-        config.globalDailyLimit,
-      );
+      result = await rateLimits.consume(ipHash, config.perIpDailyLimit, config.globalDailyLimit);
     } catch {
       // Fail closed: without the counter there is no protection for the AI quota.
       throw fail(503, "service_unavailable", MESSAGES.busy);
@@ -107,8 +103,16 @@ export function createAnalyzeHandler({ provider, rateLimits, config, now = Date.
     let detail: string | undefined;
     try {
       const input = await readInput(req);
-      await claimQuota(req);
-      const raw = await runAi(input, started);
+      const ipHash = hashIp(getClientIp(req.headers), config.ipHashSalt);
+      await claimQuota(ipHash);
+      let raw: RawAnalysis;
+      try {
+        raw = await runAi(input, started);
+      } catch (error) {
+        // The provider failed, not the visitor: give the quota slot back (best effort).
+        if (error instanceof Failure && error.code === "ai_unavailable") await rateLimits.refund(ipHash).catch(() => {});
+        throw error;
+      }
 
       const analysis = verifyEvidence(raw, input.resumeText);
       const score = scoreFromRequirements(analysis.requirements);

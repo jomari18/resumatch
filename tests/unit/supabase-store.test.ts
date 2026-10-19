@@ -107,3 +107,11 @@ describe("Supabase RateLimitStore fails closed", () => {
     );
   });
 });
+
+describe("Supabase RateLimitStore refund", () => {
+  it("calls refund_quota with p_ip_hash", async () => {
+    const { client, rpcCalls } = fakeClient(() => ({ data: null, error: null }));
+    await createSupabaseStores({ ...opts, client }).rateLimits.refund("hash");
+    expect(rpcCalls).toEqual([{ fn: "refund_quota", params: { p_ip_hash: "hash" } }]);
+  });
+});

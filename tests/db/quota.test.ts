@@ -40,3 +40,27 @@ describe("consume_quota", () => {
       await expect(client.query(consume, ["a", 0, 100])).rejects.toThrow();
     }));
 });
+
+describe("refund_quota", () => {
+  it("gives back one IP slot and one global slot, never below zero", () =>
+    withDb(async ({ client }) => {
+      expect((await client.query(consume, ["a", 1, 100])).rows[0].r).toBe("ok");
+      expect((await client.query(consume, ["a", 1, 100])).rows[0].r).toBe("ip_limit");
+      await client.query("select public.refund_quota($1)", ["a"]);
+      expect((await client.query(consume, ["a", 1, 100])).rows[0].r).toBe("ok");
+      await client.query("select public.refund_quota($1)", ["a"]);
+      await client.query("select public.refund_quota($1)", ["a"]);
+      const { rows } = await client.query("select ip_hash, count from public.rate_limits order by ip_hash");
+      expect(rows).toEqual([
+        { ip_hash: "__global__", count: 0 },
+        { ip_hash: "a", count: 0 },
+      ]);
+    }));
+
+  it("is executable only by service_role", () =>
+    withDb(async ({ client }) => {
+      await client.query("set role anon");
+      await expect(client.query("select public.refund_quota('a')")).rejects.toThrow(/permission denied/);
+      await client.query("reset role");
+    }));
+});

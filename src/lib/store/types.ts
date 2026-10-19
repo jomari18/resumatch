@@ -4,6 +4,8 @@ export type QuotaResult = "ok" | "ip_limit" | "global_limit";
 
 export interface RateLimitStore {
   consume(ipHash: string, perIpLimit: number, globalLimit: number): Promise<QuotaResult>;
+  /** Gives back the slot taken today by consume(); used when the AI provider caused the failure. */
+  refund(ipHash: string): Promise<void>;
 }
 
 export type StoredShare = { result: AnalysisResult; jobTitle: string; createdAt: string; expiresAt: string };

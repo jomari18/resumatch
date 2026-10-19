@@ -62,3 +62,12 @@ describe("memory ShareStore", () => {
     expect(await shares.get("abcdefghijkl")).toBeNull();
   });
 });
+
+describe("memory RateLimitStore refund", () => {
+  it("gives the slot back", async () => {
+    const { rateLimits } = createMemoryStores();
+    expect(await rateLimits.consume("a", 1, 100)).toBe("ok");
+    await rateLimits.refund("a");
+    expect(await rateLimits.consume("a", 1, 100)).toBe("ok");
+  });
+});

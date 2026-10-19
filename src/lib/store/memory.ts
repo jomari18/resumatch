@@ -31,6 +31,12 @@ export function createMemoryStores(opts: { now?: () => Date } = {}): { rateLimit
       counts.set(globalKey, (counts.get(globalKey) ?? 0) + 1);
       return "ok";
     },
+    async refund(ipHash) {
+      const day = manilaDay(now());
+      for (const key of [`${day}|${ipHash}`, `${day}|${GLOBAL_KEY}`]) {
+        counts.set(key, Math.max((counts.get(key) ?? 0) - 1, 0));
+      }
+    },
   };
 
   const isLive = (row: Row) => row.expiresAt > now();
