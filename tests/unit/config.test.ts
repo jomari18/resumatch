@@ -55,4 +55,9 @@ describe("getServerConfig store scope", () => {
     const config = getServerConfig({ ...required, GEMINI_API_KEY: "" }, { scope: "store" });
     expect(config.store).toBe("supabase");
   });
+
+  it("reads GEMINI_FALLBACK_MODELS as a comma-separated list", () => {
+    expect(getServerConfig(required).geminiFallbackModels).toEqual(["gemini-3.5-flash-lite"]);
+    expect(getServerConfig({ ...required, GEMINI_FALLBACK_MODELS: "a, b" }).geminiFallbackModels).toEqual(["a", "b"]);
+  });
 });

@@ -10,6 +10,7 @@ export const testConfig: ServerConfig = {
   fakeAiMode: "ok",
   geminiApiKey: null,
   geminiModel: "test-model",
+  geminiFallbackModels: [],
   aiTimeoutMs: 20000,
   store: "memory",
   supabaseUrl: null,

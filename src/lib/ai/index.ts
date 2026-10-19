@@ -8,5 +8,9 @@ export async function getProvider(config: ServerConfig): Promise<AIProvider> {
   // Loaded lazily so tests and fake-provider runs never load the SDK.
   const { createGeminiProvider } = await import("@/lib/ai/gemini");
   if (!config.geminiApiKey) throw new Error("GEMINI_API_KEY is required for the Gemini provider");
-  return createGeminiProvider({ apiKey: config.geminiApiKey, model: config.geminiModel });
+  return createGeminiProvider({
+    apiKey: config.geminiApiKey,
+    model: config.geminiModel,
+    fallbackModels: config.geminiFallbackModels,
+  });
 }

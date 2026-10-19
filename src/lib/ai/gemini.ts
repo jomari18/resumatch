@@ -35,44 +35,62 @@ function toGeminiSchema(schema: Record<string, unknown>): Record<string, unknown
 
 const GEMINI_SCHEMA = toGeminiSchema(rawAnalysisJsonSchema);
 
-export function createGeminiProvider(opts: { apiKey: string; model: string; client?: GeminiLike }): AIProvider {
+export function createGeminiProvider(opts: {
+  apiKey: string;
+  model: string;
+  /** Models tried in order when the previous one is rate-limited or overloaded. */
+  fallbackModels?: string[];
+  client?: GeminiLike;
+}): AIProvider {
   // The real client's generateContent accepts a superset of GenerateParams.
   const client: GeminiLike = opts.client ?? (new GoogleGenAI({ apiKey: opts.apiKey }) as unknown as GeminiLike);
 
+  async function call(model: string, input: Parameters<AIProvider["analyze"]>[0], signal: AbortSignal): Promise<unknown> {
+    let text: string | undefined;
+    try {
+      const response = await client.models.generateContent({
+        model,
+        contents: buildUserPrompt(input),
+        config: {
+          systemInstruction: SYSTEM_PROMPT,
+          temperature: 0.2,
+          responseMimeType: "application/json",
+          responseJsonSchema: GEMINI_SCHEMA,
+          // Extraction needs no long reasoning; low thinking keeps replies well inside the deadline.
+          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+          abortSignal: signal,
+        },
+      });
+      text = response.text;
+    } catch (error) {
+      if (signal.aborted) throw new AiUnavailableError("Gemini request timed out");
+      if (error instanceof ApiError) {
+        // 4xx messages describe the rejected parameter; the request text is not echoed back.
+        const reason = error.status >= 400 && error.status < 500 ? `: ${String(error.message).slice(0, 300)}` : "";
+        const retryable = error.status === 429 || error.status >= 500;
+        throw new AiUnavailableError(`Gemini API error ${error.status}${reason}`, { retryable });
+      }
+      throw new AiUnavailableError(`Gemini request failed (${(error as Error)?.name ?? "unknown"})`);
+    }
+
+    if (!text) throw new AiInvalidOutputError("Gemini returned no text");
+    try {
+      return JSON.parse(text) as unknown;
+    } catch {
+      throw new AiInvalidOutputError("Gemini returned text that is not JSON");
+    }
+  }
+
+  const models = [opts.model, ...(opts.fallbackModels ?? [])];
   return {
     async analyze(input, { signal }) {
-      let text: string | undefined;
-      try {
-        const response = await client.models.generateContent({
-          model: opts.model,
-          contents: buildUserPrompt(input),
-          config: {
-            systemInstruction: SYSTEM_PROMPT,
-            temperature: 0.2,
-            responseMimeType: "application/json",
-            responseJsonSchema: GEMINI_SCHEMA,
-            // Extraction needs no long reasoning; low thinking keeps replies inside the 20 s deadline.
-            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-            abortSignal: signal,
-          },
-        });
-        text = response.text;
-      } catch (error) {
-        if (signal.aborted) throw new AiUnavailableError("Gemini request timed out");
-        if (error instanceof ApiError) {
-          // 4xx messages describe the rejected parameter; the request text is not echoed back.
-          const reason = error.status >= 400 && error.status < 500 ? `: ${String(error.message).slice(0, 300)}` : "";
-          const retryable = error.status === 429 || error.status >= 500;
-          throw new AiUnavailableError(`Gemini API error ${error.status}${reason}`, { retryable });
+      for (let i = 0; ; i++) {
+        try {
+          return await call(models[i], input, signal);
+        } catch (error) {
+          const canFallBack = error instanceof AiUnavailableError && error.retryable && i + 1 < models.length && !signal.aborted;
+          if (!canFallBack) throw error;
         }
-        throw new AiUnavailableError(`Gemini request failed (${(error as Error)?.name ?? "unknown"})`);
-      }
-
-      if (!text) throw new AiInvalidOutputError("Gemini returned no text");
-      try {
-        return JSON.parse(text) as unknown;
-      } catch {
-        throw new AiInvalidOutputError("Gemini returned text that is not JSON");
       }
     },
   };

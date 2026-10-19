@@ -10,6 +10,8 @@ export type ServerConfig = {
   fakeAiMode: FakeMode;
   geminiApiKey: string | null;
   geminiModel: string;
+  /** Tried in order when the main model is rate-limited or overloaded. */
+  geminiFallbackModels: string[];
   aiTimeoutMs: number;
   store: "supabase" | "memory";
   supabaseUrl: string | null;
@@ -75,6 +77,10 @@ export function getServerConfig(
     fakeAiMode: oneOf(env, "FAKE_AI_MODE", FAKE_MODES, "ok"),
     geminiApiKey: needsAi && aiProvider === "gemini" ? required(env, "GEMINI_API_KEY") : value(env, "GEMINI_API_KEY"),
     geminiModel: value(env, "GEMINI_MODEL") ?? "gemini-3.6-flash",
+    geminiFallbackModels: (value(env, "GEMINI_FALLBACK_MODELS") ?? "gemini-3.5-flash-lite")
+      .split(",")
+      .map((m) => m.trim())
+      .filter(Boolean),
     aiTimeoutMs: positiveInt(env, "AI_TIMEOUT_MS", 20000),
     store,
     supabaseUrl: store === "supabase" ? required(env, "SUPABASE_URL") : value(env, "SUPABASE_URL"),

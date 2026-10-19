@@ -85,4 +85,34 @@ describe("createGeminiProvider", () => {
     expect(err).toBeInstanceOf(AiUnavailableError);
     expect(err.retryable).toBe(retryable);
   });
+
+  it("falls back to the next model when the first one is overloaded", async () => {
+    const models: string[] = [];
+    const client: GeminiLike = {
+      models: {
+        generateContent: async (params) => {
+          models.push(params.model);
+          if (params.model === "primary") throw new ApiError({ message: "overloaded", status: 503 });
+          return { text: JSON.stringify(fixture) };
+        },
+      },
+    };
+    const provider = createGeminiProvider({ apiKey: "k", model: "primary", fallbackModels: ["backup"], client });
+    expect(await provider.analyze(input, live())).toEqual(fixture);
+    expect(models).toEqual(["primary", "backup"]);
+  });
+
+  it("does not fall back on a non-retryable error", async () => {
+    const models: string[] = [];
+    const client: GeminiLike = {
+      models: {
+        generateContent: async (params) => {
+          models.push(params.model);
+          throw new ApiError({ message: "bad", status: 400 });
+        },
+      },
+    };
+    await createGeminiProvider({ apiKey: "k", model: "primary", fallbackModels: ["backup"], client }).analyze(input, live()).catch(() => {});
+    expect(models).toEqual(["primary"]);
+  });
 });
