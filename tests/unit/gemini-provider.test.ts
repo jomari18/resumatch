@@ -35,6 +35,7 @@ describe("createGeminiProvider", () => {
       systemInstruction: SYSTEM_PROMPT,
       temperature: 0.2,
       responseMimeType: "application/json",
+      thinkingConfig: { thinkingLevel: "MINIMAL" },
     });
     expect(Object.keys((params.config.responseJsonSchema as { properties: object }).properties)).toEqual(
       Object.keys((rawAnalysisJsonSchema as unknown as { properties: object }).properties),

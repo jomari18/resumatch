@@ -2,9 +2,9 @@ import "server-only";
 /**
  * Gemini provider (SDK @google/genai 2.30).
  * Call shape: ai.models.generateContent({ model, contents, config: { systemInstruction, temperature,
- * responseMimeType: "application/json", responseJsonSchema, abortSignal } }) → response.text
+ * responseMimeType: "application/json", responseJsonSchema, thinkingConfig, abortSignal } }) → response.text
  */
-import { ApiError, GoogleGenAI } from "@google/genai";
+import { ApiError, GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { SYSTEM_PROMPT, buildUserPrompt } from "@/lib/ai/prompt";
 import { AiInvalidOutputError, AiUnavailableError, type AIProvider } from "@/lib/ai/provider";
 import { rawAnalysisJsonSchema } from "@/lib/ai/schema";
@@ -17,6 +17,7 @@ type GenerateParams = {
     temperature: number;
     responseMimeType: "application/json";
     responseJsonSchema: unknown;
+    thinkingConfig: { thinkingLevel: ThinkingLevel };
     abortSignal: AbortSignal;
   };
 };
@@ -50,6 +51,8 @@ export function createGeminiProvider(opts: { apiKey: string; model: string; clie
             temperature: 0.2,
             responseMimeType: "application/json",
             responseJsonSchema: GEMINI_SCHEMA,
+            // Extraction needs no long reasoning; minimal thinking keeps replies inside the 20 s deadline.
+            thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
             abortSignal: signal,
           },
         });
