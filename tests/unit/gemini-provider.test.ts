@@ -76,4 +76,13 @@ describe("createGeminiProvider", () => {
       createGeminiProvider({ apiKey: "k", model: "m", client }).analyze(input, { signal: controller.signal }),
     ).rejects.toBeInstanceOf(AiUnavailableError);
   });
+
+  it.each([[429, true], [503, true], [400, false]])("marks status %i as retryable=%s", async (status, retryable) => {
+    const { client } = clientReturning(async () => {
+      throw new ApiError({ message: "x", status });
+    });
+    const err = (await createGeminiProvider({ apiKey: "k", model: "m", client }).analyze(input, live()).catch((e: unknown) => e)) as AiUnavailableError;
+    expect(err).toBeInstanceOf(AiUnavailableError);
+    expect(err.retryable).toBe(retryable);
+  });
 });

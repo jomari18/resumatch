@@ -78,6 +78,9 @@ export function createAnalyzeHandler({ provider, rateLimits, config, now = Date.
         try {
           output = await provider.analyze(input, { signal: controller.signal });
         } catch (error) {
+          if (error instanceof AiUnavailableError && error.retryable && attempt < 2 && deadline - now() >= MIN_RETRY_BUDGET_MS) {
+            continue;
+          }
           if (!(error instanceof AiInvalidOutputError)) {
             const detail = error instanceof AiUnavailableError ? error.message : "unexpected provider error";
             throw new Failure(errorResponse(503, "ai_unavailable", MESSAGES.busy), "ai_unavailable", detail);

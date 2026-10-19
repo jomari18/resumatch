@@ -154,4 +154,25 @@ describe("POST /api/analyze", () => {
     const entry = JSON.parse(lines.at(-1)!);
     expect(entry).toMatchObject({ code: "ai_unavailable", detail: "Gemini API error 404" });
   });
+
+  it("retries once when the provider is temporarily busy", async () => {
+    const sample = await createFakeProvider("ok").analyze({ resumeText: "", jobText: "" }, { signal: new AbortController().signal });
+    let calls = 0;
+    const flaky: AIProvider = {
+      analyze: async () => {
+        calls += 1;
+        if (calls === 1) throw new AiUnavailableError("Gemini API error 503", { retryable: true });
+        return sample;
+      },
+    };
+    expect((await setup(flaky).handler(post())).status).toBe(200);
+    expect(calls).toBe(2);
+  });
+
+  it("does not retry a non-retryable provider error", async () => {
+    let calls = 0;
+    const broken: AIProvider = { analyze: async () => { calls += 1; throw new AiUnavailableError("Gemini API error 400"); } };
+    expect((await setup(broken).handler(post())).status).toBe(503);
+    expect(calls).toBe(1);
+  });
 });
