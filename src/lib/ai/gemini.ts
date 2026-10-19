@@ -59,7 +59,11 @@ export function createGeminiProvider(opts: { apiKey: string; model: string; clie
         text = response.text;
       } catch (error) {
         if (signal.aborted) throw new AiUnavailableError("Gemini request timed out");
-        if (error instanceof ApiError) throw new AiUnavailableError(`Gemini API error ${error.status}`);
+        if (error instanceof ApiError) {
+          // 4xx messages describe the rejected parameter; the request text is not echoed back.
+          const reason = error.status >= 400 && error.status < 500 ? `: ${String(error.message).slice(0, 300)}` : "";
+          throw new AiUnavailableError(`Gemini API error ${error.status}${reason}`);
+        }
         throw new AiUnavailableError(`Gemini request failed (${(error as Error)?.name ?? "unknown"})`);
       }
 
