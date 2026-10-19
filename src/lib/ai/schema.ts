@@ -34,3 +34,26 @@ export const AnalysisResultSchema = RawAnalysisSchema.extend({
 export type AnalysisResult = z.infer<typeof AnalysisResultSchema>;
 
 export const rawAnalysisJsonSchema = z.toJSONSchema(RawAnalysisSchema) as Record<string, unknown> & { type: string };
+
+const clip = (v: unknown, max: number) => (typeof v === "string" && v.length > max ? v.slice(0, max).trimEnd() : v);
+
+/**
+ * Models sometimes return a well-formed answer that is merely too long. Trim strings and arrays
+ * to the schema limits before validating, so a verbose answer is shortened instead of rejected.
+ * Anything structurally wrong is left alone for the schema to reject.
+ */
+export function coerceRawAnalysis(output: unknown): unknown {
+  if (output === null || typeof output !== "object" || Array.isArray(output)) return output;
+  const o = output as Record<string, unknown>;
+  const out: Record<string, unknown> = { ...o, jobTitle: clip(o.jobTitle, 120), company: clip(o.company, 120) };
+  if (Array.isArray(o.requirements)) {
+    out.requirements = o.requirements.slice(0, 25).map((r) =>
+      r && typeof r === "object"
+        ? { ...(r as Record<string, unknown>), skill: clip((r as Record<string, unknown>).skill, 80), evidence: clip((r as Record<string, unknown>).evidence, 300) }
+        : r,
+    );
+  }
+  if (Array.isArray(o.suggestions)) out.suggestions = o.suggestions.slice(0, 6).map((s) => clip(s, 300));
+  if ("coverLetter" in o) out.coverLetter = clip(o.coverLetter, 3500);
+  return out;
+}

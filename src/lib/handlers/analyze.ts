@@ -1,7 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { AiInvalidOutputError, AiUnavailableError, type AIProvider } from "@/lib/ai/provider";
-import { RawAnalysisSchema, type AnalysisResult, type RawAnalysis } from "@/lib/ai/schema";
+import { RawAnalysisSchema, coerceRawAnalysis, type AnalysisResult, type RawAnalysis } from "@/lib/ai/schema";
 import { getClientIp, hashIp } from "@/lib/client-ip";
 import type { ServerConfig } from "@/lib/config";
 import { verifyEvidence } from "@/lib/evidence";
@@ -87,10 +87,12 @@ export function createAnalyzeHandler({ provider, rateLimits, config, now = Date.
           }
           output = undefined;
         }
-        const parsed = RawAnalysisSchema.safeParse(output);
+        const parsed = RawAnalysisSchema.safeParse(coerceRawAnalysis(output));
         if (parsed.success) return parsed.data;
         if (attempt >= 2 || deadline - now() < MIN_RETRY_BUDGET_MS) {
-          throw fail(502, "ai_invalid_output", MESSAGES.aiInvalid);
+          // Field paths only (for example "requirements.3.status"), never values.
+          const detail = parsed.error.issues.slice(0, 5).map((i) => i.path.join(".") || "(root)").join(", ");
+          throw new Failure(errorResponse(502, "ai_invalid_output", MESSAGES.aiInvalid), "ai_invalid_output", detail);
         }
       }
     } finally {
