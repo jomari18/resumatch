@@ -51,8 +51,8 @@ export function createGeminiProvider(opts: { apiKey: string; model: string; clie
             temperature: 0.2,
             responseMimeType: "application/json",
             responseJsonSchema: GEMINI_SCHEMA,
-            // Extraction needs no long reasoning; minimal thinking keeps replies inside the 20 s deadline.
-            thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
+            // Extraction needs no long reasoning; low thinking keeps replies inside the 20 s deadline.
+            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
             abortSignal: signal,
           },
         });
