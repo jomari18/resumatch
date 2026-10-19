@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { AiInvalidOutputError, type AIProvider } from "@/lib/ai/provider";
+import { AiInvalidOutputError, AiUnavailableError, type AIProvider } from "@/lib/ai/provider";
 import { RawAnalysisSchema, type AnalysisResult, type RawAnalysis } from "@/lib/ai/schema";
 import { getClientIp, hashIp } from "@/lib/client-ip";
 import type { ServerConfig } from "@/lib/config";
@@ -19,7 +19,12 @@ const MIN_RETRY_BUDGET_MS = 8000;
 type Deps = { provider: AIProvider; rateLimits: RateLimitStore; config: ServerConfig; now?: () => number };
 
 class Failure {
-  constructor(readonly response: Response, readonly code: ErrorCode) {}
+  constructor(
+    readonly response: Response,
+    readonly code: ErrorCode,
+    /** Provider error summary for the log line (status codes only, never user text). */
+    readonly detail?: string,
+  ) {}
 }
 
 const fail = (status: number, code: ErrorCode, message: string, extra?: { field?: string; resetsAt?: string }) =>
@@ -73,7 +78,10 @@ export function createAnalyzeHandler({ provider, rateLimits, config, now = Date.
         try {
           output = await provider.analyze(input, { signal: controller.signal });
         } catch (error) {
-          if (!(error instanceof AiInvalidOutputError)) throw fail(503, "ai_unavailable", MESSAGES.busy);
+          if (!(error instanceof AiInvalidOutputError)) {
+            const detail = error instanceof AiUnavailableError ? error.message : "unexpected provider error";
+            throw new Failure(errorResponse(503, "ai_unavailable", MESSAGES.busy), "ai_unavailable", detail);
+          }
           output = undefined;
         }
         const parsed = RawAnalysisSchema.safeParse(output);
@@ -91,6 +99,7 @@ export function createAnalyzeHandler({ provider, rateLimits, config, now = Date.
     const requestId = randomUUID();
     const started = now();
     let code: ErrorCode | "ok" = "ok";
+    let detail: string | undefined;
     try {
       const input = await readInput(req);
       await claimQuota(req);
@@ -110,13 +119,14 @@ export function createAnalyzeHandler({ provider, rateLimits, config, now = Date.
     } catch (error) {
       if (error instanceof Failure) {
         code = error.code;
+        detail = error.detail;
         return error.response;
       }
       code = "service_unavailable";
       return errorResponse(503, "service_unavailable", MESSAGES.busy);
     } finally {
       // Never log request content: only the id, the outcome and the duration.
-      console.info(JSON.stringify({ route: "analyze", requestId, code, ms: now() - started }));
+      console.info(JSON.stringify({ route: "analyze", requestId, code, ...(detail ? { detail } : {}), ms: now() - started }));
     }
   };
 }

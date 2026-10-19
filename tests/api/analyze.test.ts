@@ -146,4 +146,12 @@ describe("POST /api/analyze", () => {
     const res = await setup({ analyze: async () => Promise.reject(new AiUnavailableError("x")) }).handler(post());
     expect(res.status).toBe(503);
   });
+
+  it("logs the provider failure reason (never user text) for ai_unavailable", async () => {
+    const lines: string[] = [];
+    vi.spyOn(console, "info").mockImplementation((line: unknown) => void lines.push(String(line)));
+    await setup({ analyze: async () => Promise.reject(new AiUnavailableError("Gemini API error 404")) }).handler(post());
+    const entry = JSON.parse(lines.at(-1)!);
+    expect(entry).toMatchObject({ code: "ai_unavailable", detail: "Gemini API error 404" });
+  });
 });
