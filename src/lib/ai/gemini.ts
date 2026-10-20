@@ -77,7 +77,7 @@ export function createGeminiProvider(opts: {
         // 4xx messages describe the rejected parameter; the request text is not echoed back.
         const reason = error.status >= 400 && error.status < 500 ? `: ${String(error.message).slice(0, 300)}` : "";
         const retryable = error.status === 429 || error.status >= 500;
-        throw new AiUnavailableError(`Gemini API error ${error.status}${reason}`, { retryable });
+        throw new AiUnavailableError(`Gemini API error ${error.status}${reason}`, { retryable, status: error.status });
       }
       throw new AiUnavailableError(`Gemini request failed (${(error as Error)?.name ?? "unknown"})`);
     }
@@ -95,8 +95,8 @@ export function createGeminiProvider(opts: {
     async analyze(input, { signal, onAttempt }) {
       for (let i = 0; ; i++) {
         const startedAt = Date.now();
-        const report = (outcome: AttemptLog["outcome"]) =>
-          onAttempt?.({ model: models[i], ms: Date.now() - startedAt, outcome });
+        const report = (outcome: AttemptLog["outcome"], status?: number) =>
+          onAttempt?.({ model: models[i], ms: Date.now() - startedAt, outcome, ...(status ? { status } : {}) });
         const hasFallback = i + 1 < models.length;
         const attempt = new AbortController();
         const stop = () => attempt.abort();
@@ -109,7 +109,9 @@ export function createGeminiProvider(opts: {
           return output;
         } catch (error) {
           const slow = attempt.signal.aborted && !signal.aborted;
-          report(slow ? "slow" : error instanceof AiInvalidOutputError ? "invalid" : "unavailable");
+          if (slow) report("slow");
+          else if (error instanceof AiInvalidOutputError) report("invalid");
+          else report("unavailable", error instanceof AiUnavailableError ? error.status : undefined);
           const failure = slow
             ? new AiUnavailableError(`Gemini model ${models[i]} was too slow`, { retryable: true })
             : error;

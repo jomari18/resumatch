@@ -164,6 +164,23 @@ describe("createGeminiProvider", () => {
     expect(attempts.every((a) => Number.isInteger(a.ms) && a.ms >= 0)).toBe(true);
   });
 
+  it("includes the API status code when a model is unavailable", async () => {
+    const client: GeminiLike = {
+      models: {
+        generateContent: async (params) => {
+          if (params.model === "primary") throw new ApiError({ message: "quota", status: 429 });
+          return { text: JSON.stringify(fixture) };
+        },
+      },
+    };
+    const attempts: { model: string; outcome: string; status?: number }[] = [];
+    const provider = createGeminiProvider({ apiKey: "k", model: "primary", fallbackModels: ["backup"], client });
+    await provider.analyze(input, { signal: new AbortController().signal, onAttempt: (a) => attempts.push(a) });
+    expect(attempts[0]).toMatchObject({ model: "primary", outcome: "unavailable", status: 429 });
+    expect(attempts[1]).toMatchObject({ model: "backup", outcome: "ok" });
+    expect(attempts[1].status).toBeUndefined();
+  });
+
   it("does not cap the last model, which keeps the whole remaining budget", async () => {
     const { client } = clientReturning(
       () => new Promise((resolve) => setTimeout(() => resolve({ text: JSON.stringify(fixture) }), 40)),

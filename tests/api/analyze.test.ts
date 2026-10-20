@@ -158,6 +158,19 @@ describe("POST /api/analyze", () => {
     });
   });
 
+  it("adds the provider status code to an unavailable attempt in the log", async () => {
+    const lines: string[] = [];
+    vi.spyOn(console, "info").mockImplementation((line: unknown) => void lines.push(String(line)));
+    const provider: AIProvider = {
+      analyze: async (input, opts) => {
+        opts.onAttempt?.({ model: "m1", ms: 900, outcome: "unavailable", status: 503 });
+        return createFakeProvider("ok").analyze(input, opts);
+      },
+    };
+    await setup(provider).handler(post());
+    expect(JSON.parse(lines.at(-1)!).attempts).toBe("m1:900:unavailable:503");
+  });
+
   it("never logs the resume text", async () => {
     const logged: string[] = [];
     for (const level of ["log", "info", "warn", "error"] as const) {

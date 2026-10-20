@@ -1,7 +1,13 @@
 export type AnalyzeInput = { resumeText: string; jobText: string };
 
 /** One model call, for logs: never contains request or response text. */
-export type AttemptLog = { model: string; ms: number; outcome: "ok" | "slow" | "unavailable" | "invalid" };
+export type AttemptLog = {
+  model: string;
+  ms: number;
+  outcome: "ok" | "slow" | "unavailable" | "invalid";
+  /** HTTP status from the provider, when it answered with an error. */
+  status?: number;
+};
 
 /**
  * An LLM backend. It returns `unknown` on purpose: the caller validates the output with zod,
@@ -19,9 +25,12 @@ export class AiUnavailableError extends Error {
   override name = "AiUnavailableError";
   /** True for temporary provider failures (rate limit or overload) that are worth one retry. */
   readonly retryable: boolean;
-  constructor(message: string, opts: { retryable?: boolean } = {}) {
+  /** HTTP status of the provider error, if there was one. */
+  readonly status?: number;
+  constructor(message: string, opts: { retryable?: boolean; status?: number } = {}) {
     super(message);
     this.retryable = opts.retryable ?? false;
+    this.status = opts.status;
   }
 }
 

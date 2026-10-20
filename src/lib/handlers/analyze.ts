@@ -155,7 +155,9 @@ export function createAnalyzeHandler({ provider, rateLimits, config, now = Date.
       return errorResponse(503, "service_unavailable", MESSAGES.busy);
     } finally {
       // Never log request content: only the id, the outcome and the duration.
-      const tried = attempts.map((a) => `${a.model}:${a.ms}:${a.outcome}`).join(",");
+      const tried = attempts
+        .map((a) => [a.model, a.ms, a.outcome, a.status].filter((v) => v !== undefined).join(":"))
+        .join(",");
       console.info(
         JSON.stringify({
           route: "analyze",
