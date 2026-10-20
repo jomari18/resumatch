@@ -15,12 +15,14 @@ const PDF_MESSAGES = {
   other: "This PDF can't be opened here. Use a text-based PDF under 5 MB, or paste your resume.",
 } as const;
 
-type Props = { value: string; onChange: (value: string) => void; serverError?: string };
+type Props = { value: string; onChange: (value: string) => void; serverError?: string; showErrors?: boolean };
 
-export function ResumeInput({ value, onChange, serverError }: Props) {
+export function ResumeInput({ value, onChange, serverError, showErrors }: Props) {
   const baseId = useId();
   const [tab, setTab] = useState<Tab>("paste");
-  const [status, setStatus] = useState<{ kind: "idle" | "reading" | "done" | "error"; message?: string }>({ kind: "idle" });
+  const [status, setStatus] = useState<{ kind: "idle" | "reading" | "done" | "error"; message?: string }>({
+    kind: "idle",
+  });
   const tabRefs = useRef<Record<Tab, HTMLButtonElement | null>>({ paste: null, upload: null });
 
   useEffect(() => {
@@ -61,7 +63,10 @@ export function ResumeInput({ value, onChange, serverError }: Props) {
       return;
     }
     onChange(normalizeText(result.text));
-    setStatus({ kind: "done", message: `Text extracted from ${file.name}. Check it below and fix anything that looks wrong.` });
+    setStatus({
+      kind: "done",
+      message: `Text extracted from ${file.name}. Check it below and fix anything that looks wrong.`,
+    });
     select("paste");
   }
 
@@ -70,7 +75,11 @@ export function ResumeInput({ value, onChange, serverError }: Props) {
       <h2 id={`${baseId}-heading`} className="font-heading text-lg font-semibold text-ink">
         1. Your resume
       </h2>
-      <div role="tablist" aria-label="Resume input method" className="glass inline-flex w-fit rounded-xl border border-line p-1">
+      <div
+        role="tablist"
+        aria-label="Resume input method"
+        className="glass inline-flex w-fit rounded-xl border border-line p-1"
+      >
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -110,6 +119,7 @@ export function ResumeInput({ value, onChange, serverError }: Props) {
           placeholder="Paste the text of your resume here."
           rows={12}
           serverError={serverError}
+          showErrors={showErrors}
         />
       </div>
 
@@ -122,7 +132,9 @@ export function ResumeInput({ value, onChange, serverError }: Props) {
       >
         <label htmlFor={`${baseId}-file`} className="flex cursor-pointer flex-col items-center gap-2">
           <span className="font-heading font-semibold text-ink">Choose a PDF resume</span>
-          <span className="text-sm text-muted">Text-based PDF, up to 5 MB. The file is read on your device and never uploaded.</span>
+          <span className="text-sm text-muted">
+            Text-based PDF, up to 5 MB. The file is read on your device and never uploaded.
+          </span>
         </label>
         <input
           id={`${baseId}-file`}

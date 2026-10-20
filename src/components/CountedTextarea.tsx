@@ -11,14 +11,25 @@ type Props = {
   placeholder?: string;
   rows?: number;
   serverError?: string;
+  /** Show the length message without waiting for a blur, e.g. after a failed submit. */
+  showErrors?: boolean;
 };
 
 /** Labelled textarea with a live counter; the length message appears after the first blur. */
-export function CountedTextarea({ kind, label, value, onChange, placeholder, rows = 10, serverError }: Props) {
+export function CountedTextarea({
+  kind,
+  label,
+  value,
+  onChange,
+  placeholder,
+  rows = 10,
+  serverError,
+  showErrors = false,
+}: Props) {
   const id = useId();
   const [touched, setTouched] = useState(false);
   const check = checkLength(kind, value);
-  const message = serverError ?? (touched && !check.ok ? check.message : null);
+  const message = serverError ?? ((touched || showErrors) && !check.ok ? check.message : null);
 
   return (
     <div className="flex flex-col gap-2">

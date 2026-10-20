@@ -39,6 +39,10 @@ export function AnalyzeApp() {
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  // After a failed submit every invalid field shows its message, and focus goes to the first one.
+  const [showErrors, setShowErrors] = useState(false);
+  const [focusRequest, setFocusRequest] = useState(0);
+  const formRef = useRef<HTMLFormElement>(null);
   const inFlight = useRef(false);
   const justSubmitted = useRef(false);
   const topRef = useRef<HTMLDivElement>(null);
@@ -68,6 +72,15 @@ export function AnalyzeApp() {
     if (error && !error.field) alertRef.current?.focus();
   }, [error]);
 
+  useEffect(() => {
+    if (!focusRequest) return;
+    // Next frame: a resume error first switches the resume panel back to the Paste tab.
+    const frame = requestAnimationFrame(() =>
+      formRef.current?.querySelector<HTMLTextAreaElement>('textarea[aria-invalid="true"]')?.focus(),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [focusRequest]);
+
   function edit(field: Field, value: string) {
     if (field === "resumeText") setResume(value);
     else setJob(value);
@@ -79,9 +92,15 @@ export function AnalyzeApp() {
     if (inFlight.current) return;
     const resumeCheck = checkLength("resume", resume);
     const jobCheck = checkLength("job", job);
-    if (!resumeCheck.ok) return setError({ code: "invalid_input", message: resumeCheck.message, field: "resumeText" });
-    if (!jobCheck.ok) return setError({ code: "invalid_input", message: jobCheck.message, field: "jobText" });
+    if (!resumeCheck.ok || !jobCheck.ok) {
+      setShowErrors(true);
+      setFocusRequest((n) => n + 1);
+      if (!resumeCheck.ok) setError({ code: "invalid_input", message: resumeCheck.message, field: "resumeText" });
+      else if (!jobCheck.ok) setError({ code: "invalid_input", message: jobCheck.message, field: "jobText" });
+      return;
+    }
 
+    setShowErrors(false);
     inFlight.current = true;
     setError(null);
     setPhase("loading");
@@ -110,7 +129,8 @@ export function AnalyzeApp() {
     setPhase("input");
   }
 
-  const fieldError = (field: Field) => (error?.code === "invalid_input" && error.field === field ? error.message : undefined);
+  const fieldError = (field: Field) =>
+    error?.code === "invalid_input" && error.field === field ? error.message : undefined;
   const generalError = error && !(error.code === "invalid_input" && error.field) ? error : null;
   const loading = phase === "loading";
 
@@ -135,9 +155,19 @@ export function AnalyzeApp() {
           </button>
         </>
       ) : (
-        <form onSubmit={submit} noValidate data-ready={hydrated} className="flex flex-col gap-8">
-          <ResumeInput value={resume} onChange={(v) => edit("resumeText", v)} serverError={fieldError("resumeText")} />
-          <JobInput value={job} onChange={(v) => edit("jobText", v)} serverError={fieldError("jobText")} />
+        <form ref={formRef} onSubmit={submit} noValidate data-ready={hydrated} className="flex flex-col gap-8">
+          <ResumeInput
+            value={resume}
+            onChange={(v) => edit("resumeText", v)}
+            serverError={fieldError("resumeText")}
+            showErrors={showErrors}
+          />
+          <JobInput
+            value={job}
+            onChange={(v) => edit("jobText", v)}
+            serverError={fieldError("jobText")}
+            showErrors={showErrors}
+          />
 
           <div aria-live="polite">
             {generalError && (

@@ -9,7 +9,8 @@ const analyze = vi.fn();
 vi.mock("@/lib/client/api", () => ({ analyze: (...a: unknown[]) => analyze(...a), createShare: vi.fn() }));
 
 const RESUME = readFileSync("src/lib/ai/fixtures/sample-resume.txt", "utf8");
-const JOB = "Junior Web Developer at Acme Digital. Requirements: React, PostgreSQL. Nice to have: Docker. Build web apps.";
+const JOB =
+  "Junior Web Developer at Acme Digital. Requirements: React, PostgreSQL. Nice to have: Docker. Build web apps.";
 const sample = JSON.parse(readFileSync("src/lib/ai/fixtures/sample-analysis.json", "utf8"));
 const ok = {
   ok: true,
@@ -78,6 +79,27 @@ describe("AnalyzeApp", () => {
     await user.click(screen.getByRole("textbox", { name: "Resume" }));
     await user.paste(RESUME);
     expect(screen.queryByText("Resume must be at least 200 characters.")).not.toBeInTheDocument();
+  });
+
+  it("shows an error for every invalid field and focuses the first one", async () => {
+    const user = userEvent.setup();
+    render(<AnalyzeApp />);
+    await user.click(screen.getByRole("button", { name: "Analyze" }));
+    expect(screen.getByText("Resume must be at least 200 characters.")).toBeInTheDocument();
+    expect(screen.getByText("Job posting must be at least 100 characters.")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Resume" })).toHaveFocus());
+    expect(analyze).not.toHaveBeenCalled();
+  });
+
+  it("focuses the job posting when only the job posting is invalid", async () => {
+    const user = userEvent.setup();
+    render(<AnalyzeApp />);
+    await user.click(screen.getByRole("textbox", { name: "Resume" }));
+    await user.paste(RESUME);
+    await user.click(screen.getByRole("button", { name: "Analyze" }));
+    expect(screen.queryByText("Resume must be at least 200 characters.")).not.toBeInTheDocument();
+    expect(screen.getByText("Job posting must be at least 100 characters.")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Job posting" })).toHaveFocus());
   });
 
   it("switches to the Paste tab so a resume error is visible", async () => {
