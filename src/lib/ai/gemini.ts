@@ -35,6 +35,15 @@ function toGeminiSchema(schema: Record<string, unknown>): Record<string, unknown
 
 const GEMINI_SCHEMA = toGeminiSchema(rawAnalysisJsonSchema);
 
+/**
+ * Models documented to accept MINIMAL thinking (ai.google.dev/gemini-api/docs/thinking). MINIMAL is the
+ * fastest and is what Google recommends for extraction. Others, such as gemini-3.8-flash, reject it
+ * with a 400, so they get LOW.
+ */
+const MINIMAL_THINKING_MODELS = new Set(["gemini-3.5-flash-lite", "gemini-3.6-flash"]);
+const thinkingLevelFor = (model: string) =>
+  MINIMAL_THINKING_MODELS.has(model) ? ThinkingLevel.MINIMAL : ThinkingLevel.LOW;
+
 export function createGeminiProvider(opts: {
   apiKey: string;
   model: string;
@@ -65,8 +74,8 @@ export function createGeminiProvider(opts: {
           temperature: 0.2,
           responseMimeType: "application/json",
           responseJsonSchema: GEMINI_SCHEMA,
-          // Extraction needs no long reasoning; low thinking keeps replies well inside the deadline.
-          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+          // Extraction needs no long reasoning; minimal or low thinking keeps replies well inside the deadline.
+          thinkingConfig: { thinkingLevel: thinkingLevelFor(model) },
           abortSignal: signal,
         },
       });

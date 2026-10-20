@@ -43,6 +43,17 @@ describe("createGeminiProvider", () => {
     expect(params.config.abortSignal).toBeInstanceOf(AbortSignal);
   });
 
+  it.each([
+    ["gemini-3.5-flash-lite", "MINIMAL"],
+    ["gemini-3.6-flash", "MINIMAL"],
+    ["gemini-3.8-flash", "LOW"],
+    ["some-future-model", "LOW"],
+  ])("uses the fastest thinking level %s supports (%s)", async (model, level) => {
+    const { client, calls } = clientReturning(async () => ({ text: JSON.stringify(fixture) }));
+    await createGeminiProvider({ apiKey: "k", model, client }).analyze(input, live());
+    expect((calls[0] as { config: { thinkingConfig: unknown } }).config.thinkingConfig).toEqual({ thinkingLevel: level });
+  });
+
   it("rejects non-JSON text with AiInvalidOutputError", async () => {
     const { client } = clientReturning(async () => ({ text: "Sure! Here is your analysis" }));
     await expect(
