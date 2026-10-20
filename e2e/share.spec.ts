@@ -21,8 +21,15 @@ test("share, open read-only in another browser, then delete", async ({ page, bro
   await visitor.close();
 
   await page.goto(url!);
+  // Deleting asks first; Cancel keeps the link.
   await page.getByRole("button", { name: "Delete link" }).click();
-  await expect(page).toHaveURL("/");
+  await expect(page.getByText("Delete this link? This can't be undone.")).toBeVisible();
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("button", { name: "Delete link" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Delete link" }).click();
+  await page.getByRole("button", { name: "Yes, delete" }).click();
+  await expect(page.getByRole("status")).toHaveText("Link deleted. Anyone who opens it now sees a not-found page.");
   await page.goto(url!);
   await expect(page.getByText("This page doesn't exist or has expired.")).toBeVisible();
 });
