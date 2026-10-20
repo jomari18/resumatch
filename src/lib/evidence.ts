@@ -28,9 +28,6 @@ function includesWord(haystack: string, needle: string): boolean {
   return false;
 }
 
-/** Short quotes such as "and" match every resume, so they never count as evidence. */
-const isSubstantive = (quote: string) => quote.split(" ").length >= 3 || quote.length >= 15;
-
 /** A quote supports a skill only if it mentions it (any 2+ character token of the skill, or its key). */
 function mentionsSkill(quote: string, skill: string): boolean {
   const tokens = normalizeForMatch(skill)
@@ -47,7 +44,9 @@ function verifyOne(req: RawAnalysis["requirements"][number], haystack: string): 
     return { ...req, status: "missing", evidence: null, evidenceVerified: false };
   }
   const quote = normalizeForMatch(req.evidence);
-  if (isSubstantive(quote) && includesWord(haystack, quote)) {
+  if (quote && includesWord(haystack, quote)) {
+    // Short quotes are fine ("Git, GitHub" from a skills list) as long as they name the skill;
+    // a trivial quote such as "and" is in every resume but never names the skill.
     if (mentionsSkill(quote, req.skill)) return { ...req, evidenceVerified: true };
     // A real quote that does not mention the skill proves at most a partial match.
     return { ...req, status: "partial", evidence: null, evidenceVerified: false };
@@ -57,7 +56,8 @@ function verifyOne(req: RawAnalysis["requirements"][number], haystack: string): 
 }
 
 /**
- * Applies spec 6.4: only claims backed by a substantive, word-boundary quote found in the resume keep their status.
+ * Applies spec 6.4: only claims backed by a word-boundary quote that is found in the resume and names the skill
+ * keep their status.
  * Duplicate skills are merged after verification: the best verified status wins, and the skill is
  * required if any duplicate is required.
  */

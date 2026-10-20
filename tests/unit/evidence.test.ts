@@ -113,6 +113,24 @@ describe("verifyEvidence hardening (final review)", () => {
     expect(out.requirements[0]).toMatchObject({ status: "partial", evidenceVerified: false });
   });
 
+  it("verifies a short quote from a skills list when it names the skill", () => {
+    const skills = "Juan Dela Cruz\nSKILLS\nReact, TypeScript, Supabase, PostgreSQL, Git, GitHub, Vitest";
+    const out = verifyEvidence(base([{ skill: "Git", importance: "required", status: "matched", evidence: "Git, GitHub" }]), skills);
+    expect(out.requirements[0]).toMatchObject({ status: "matched", evidence: "Git, GitHub", evidenceVerified: true });
+  });
+
+  it("does not label a found but unrelated short quote as 'not found'", () => {
+    // The quote is in the resume, so it must not come back as an unverified quote (shown as "not found").
+    const out = verifyEvidence(base([{ skill: "Kubernetes", importance: "required", status: "matched", evidence: "and" }]), resume);
+    expect(out.requirements[0]).toMatchObject({ status: "partial", evidence: null, evidenceVerified: false });
+  });
+
+  it("does not verify an empty quote", () => {
+    const out = verifyEvidence(base([{ skill: "React", importance: "required", status: "matched", evidence: "  " }]), resume);
+    expect(out.requirements[0]).toMatchObject({ evidenceVerified: false });
+    expect(out.requirements[0].status).not.toBe("matched");
+  });
+
   it("keeps the best verified duplicate regardless of order", () => {
     const out = verifyEvidence(
       base([
