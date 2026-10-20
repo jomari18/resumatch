@@ -28,6 +28,11 @@ describe("getServerConfig", () => {
     });
   });
 
+  it("caps AI_TIMEOUT_MS below the hosting function limit", () => {
+    expect(getServerConfig({ ...required, AI_TIMEOUT_MS: "50000" }).aiTimeoutMs).toBe(24000);
+    expect(getServerConfig({ ...required, AI_TIMEOUT_MS: "15000" }).aiTimeoutMs).toBe(15000);
+  });
+
   it("requires GEMINI_API_KEY when the provider is gemini", () => {
     expect(() => getServerConfig({ ...required, GEMINI_API_KEY: "" })).toThrow(ConfigError);
   });

@@ -24,6 +24,7 @@ export type ServerConfig = {
 };
 
 const MIN_SECRET_LENGTH = 32;
+const MAX_AI_TIMEOUT_MS = 24000;
 
 function value(env: NodeJS.ProcessEnv, name: string): string | null {
   const v = env[name]?.trim();
@@ -81,7 +82,9 @@ export function getServerConfig(
       .split(",")
       .map((m) => m.trim())
       .filter(Boolean),
-    aiTimeoutMs: positiveInt(env, "AI_TIMEOUT_MS", 20000),
+    // Netlify ends a synchronous function at about 26 s with a bare 502, before any retry or
+    // fallback can run, so the AI budget always stays below that.
+    aiTimeoutMs: Math.min(positiveInt(env, "AI_TIMEOUT_MS", 20000), MAX_AI_TIMEOUT_MS),
     store,
     supabaseUrl: store === "supabase" ? required(env, "SUPABASE_URL") : value(env, "SUPABASE_URL"),
     supabaseSecretKey: store === "supabase" ? required(env, "SUPABASE_SECRET_KEY") : value(env, "SUPABASE_SECRET_KEY"),

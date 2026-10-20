@@ -102,6 +102,62 @@ describe("createGeminiProvider", () => {
     expect(models).toEqual(["primary", "backup"]);
   });
 
+  it("gives up on a slow model after attemptTimeoutMs and falls back to the next one", async () => {
+    const models: string[] = [];
+    const client: GeminiLike = {
+      models: {
+        generateContent: (params) => {
+          models.push(params.model);
+          if (params.model === "backup") return Promise.resolve({ text: JSON.stringify(fixture) });
+          // The slow model only settles when its own signal aborts.
+          return new Promise((_, reject) =>
+            params.config.abortSignal.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError"))),
+          );
+        },
+      },
+    };
+    const provider = createGeminiProvider({
+      apiKey: "k",
+      model: "primary",
+      fallbackModels: ["backup"],
+      attemptTimeoutMs: 20,
+      client,
+    });
+    expect(await provider.analyze(input, live())).toEqual(fixture);
+    expect(models).toEqual(["primary", "backup"]);
+  });
+
+  it("does not cap the last model, which keeps the whole remaining budget", async () => {
+    const { client } = clientReturning(
+      () => new Promise((resolve) => setTimeout(() => resolve({ text: JSON.stringify(fixture) }), 40)),
+    );
+    const provider = createGeminiProvider({ apiKey: "k", model: "only", attemptTimeoutMs: 10, client });
+    expect(await provider.analyze(input, live())).toEqual(fixture);
+  });
+
+  it("does not fall back once the overall request is aborted", async () => {
+    const models: string[] = [];
+    const controller = new AbortController();
+    const client: GeminiLike = {
+      models: {
+        generateContent: (params) => {
+          models.push(params.model);
+          controller.abort();
+          return Promise.reject(new DOMException("aborted", "AbortError"));
+        },
+      },
+    };
+    const provider = createGeminiProvider({
+      apiKey: "k",
+      model: "primary",
+      fallbackModels: ["backup"],
+      attemptTimeoutMs: 1000,
+      client,
+    });
+    await expect(provider.analyze(input, { signal: controller.signal })).rejects.toBeInstanceOf(AiUnavailableError);
+    expect(models).toEqual(["primary"]);
+  });
+
   it("does not fall back on a non-retryable error", async () => {
     const models: string[] = [];
     const client: GeminiLike = {

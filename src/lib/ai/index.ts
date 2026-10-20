@@ -12,5 +12,7 @@ export async function getProvider(config: ServerConfig): Promise<AIProvider> {
     apiKey: config.geminiApiKey,
     model: config.geminiModel,
     fallbackModels: config.geminiFallbackModels,
+    // A slow primary model leaves 40% of the budget for the fallback model.
+    attemptTimeoutMs: Math.round(config.aiTimeoutMs * 0.6),
   });
 }

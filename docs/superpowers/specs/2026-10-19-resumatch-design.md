@@ -440,7 +440,7 @@ The real Supabase adapter is checked by a manual smoke test after each deploy: a
 | `GEMINI_API_KEY` | Gemini key from Google AI Studio | none (required) |
 | `GEMINI_MODEL` | Gemini model id | The current Flash model in the Gemini docs. On 2026-10-19 the structured-output examples use `gemini-3.8-flash`. Confirm it before implementation. |
 | `AI_PROVIDER` | `gemini` or `fake` | `gemini` |
-| `AI_TIMEOUT_MS` | Overall AI deadline per request | `20000` |
+| `AI_TIMEOUT_MS` | Overall AI deadline per request, capped at 24000 (Netlify ends functions at about 26 s). A model with a fallback gets 60% of it | `20000` |
 | `SUPABASE_URL` | Project URL | none (required) |
 | `SUPABASE_SECRET_KEY` | Project secret key (`sb_secret_…`) or the legacy service role key | none (required) |
 | `STORE` | `supabase` or `memory` | `supabase` |

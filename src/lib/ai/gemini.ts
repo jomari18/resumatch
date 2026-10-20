@@ -40,6 +40,11 @@ export function createGeminiProvider(opts: {
   model: string;
   /** Models tried in order when the previous one is rate-limited or overloaded. */
   fallbackModels?: string[];
+  /**
+   * Longest wait for a model that still has a fallback behind it. A slow model is treated like an
+   * overloaded one, so the fallback gets the rest of the budget instead of the request timing out.
+   */
+  attemptTimeoutMs?: number;
   client?: GeminiLike;
 }): AIProvider {
   // The real client's generateContent accepts a superset of GenerateParams.
@@ -85,11 +90,22 @@ export function createGeminiProvider(opts: {
   return {
     async analyze(input, { signal }) {
       for (let i = 0; ; i++) {
+        const hasFallback = i + 1 < models.length;
+        const attempt = new AbortController();
+        const stop = () => attempt.abort();
+        signal.addEventListener("abort", stop);
+        if (signal.aborted) attempt.abort();
+        const timer = hasFallback && opts.attemptTimeoutMs ? setTimeout(stop, opts.attemptTimeoutMs) : undefined;
         try {
-          return await call(models[i], input, signal);
+          return await call(models[i], input, attempt.signal);
         } catch (error) {
-          const canFallBack = error instanceof AiUnavailableError && error.retryable && i + 1 < models.length && !signal.aborted;
-          if (!canFallBack) throw error;
+          const slow = attempt.signal.aborted && !signal.aborted;
+          const failure = slow ? new AiUnavailableError(`Gemini model ${models[i]} was too slow`, { retryable: true }) : error;
+          const canFallBack = failure instanceof AiUnavailableError && failure.retryable && hasFallback && !signal.aborted;
+          if (!canFallBack) throw failure;
+        } finally {
+          clearTimeout(timer);
+          signal.removeEventListener("abort", stop);
         }
       }
     },
