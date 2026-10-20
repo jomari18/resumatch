@@ -45,25 +45,25 @@ describe("createGeminiProvider", () => {
 
   it("rejects non-JSON text with AiInvalidOutputError", async () => {
     const { client } = clientReturning(async () => ({ text: "Sure! Here is your analysis" }));
-    await expect(createGeminiProvider({ apiKey: "k", model: "m", client }).analyze(input, live())).rejects.toBeInstanceOf(
-      AiInvalidOutputError,
-    );
+    await expect(
+      createGeminiProvider({ apiKey: "k", model: "m", client }).analyze(input, live()),
+    ).rejects.toBeInstanceOf(AiInvalidOutputError);
   });
 
   it("rejects empty text with AiInvalidOutputError", async () => {
     const { client } = clientReturning(async () => ({ text: undefined }));
-    await expect(createGeminiProvider({ apiKey: "k", model: "m", client }).analyze(input, live())).rejects.toBeInstanceOf(
-      AiInvalidOutputError,
-    );
+    await expect(
+      createGeminiProvider({ apiKey: "k", model: "m", client }).analyze(input, live()),
+    ).rejects.toBeInstanceOf(AiInvalidOutputError);
   });
 
   it.each([429, 503])("maps an API error with status %i to AiUnavailableError", async (status) => {
     const { client } = clientReturning(async () => {
       throw new ApiError({ message: "busy", status });
     });
-    await expect(createGeminiProvider({ apiKey: "k", model: "m", client }).analyze(input, live())).rejects.toBeInstanceOf(
-      AiUnavailableError,
-    );
+    await expect(
+      createGeminiProvider({ apiKey: "k", model: "m", client }).analyze(input, live()),
+    ).rejects.toBeInstanceOf(AiUnavailableError);
   });
 
   it("maps an aborted request to AiUnavailableError", async () => {
@@ -77,11 +77,17 @@ describe("createGeminiProvider", () => {
     ).rejects.toBeInstanceOf(AiUnavailableError);
   });
 
-  it.each([[429, true], [503, true], [400, false]])("marks status %i as retryable=%s", async (status, retryable) => {
+  it.each([
+    [429, true],
+    [503, true],
+    [400, false],
+  ])("marks status %i as retryable=%s", async (status, retryable) => {
     const { client } = clientReturning(async () => {
       throw new ApiError({ message: "x", status });
     });
-    const err = (await createGeminiProvider({ apiKey: "k", model: "m", client }).analyze(input, live()).catch((e: unknown) => e)) as AiUnavailableError;
+    const err = (await createGeminiProvider({ apiKey: "k", model: "m", client })
+      .analyze(input, live())
+      .catch((e: unknown) => e)) as AiUnavailableError;
     expect(err).toBeInstanceOf(AiUnavailableError);
     expect(err.retryable).toBe(retryable);
   });
@@ -111,7 +117,9 @@ describe("createGeminiProvider", () => {
           if (params.model === "backup") return Promise.resolve({ text: JSON.stringify(fixture) });
           // The slow model only settles when its own signal aborts.
           return new Promise((_, reject) =>
-            params.config.abortSignal.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError"))),
+            params.config.abortSignal.addEventListener("abort", () =>
+              reject(new DOMException("aborted", "AbortError")),
+            ),
           );
         },
       },
@@ -125,6 +133,35 @@ describe("createGeminiProvider", () => {
     });
     expect(await provider.analyze(input, live())).toEqual(fixture);
     expect(models).toEqual(["primary", "backup"]);
+  });
+
+  it("reports each model attempt with its outcome", async () => {
+    const client: GeminiLike = {
+      models: {
+        generateContent: (params) => {
+          if (params.model === "backup") return Promise.resolve({ text: JSON.stringify(fixture) });
+          return new Promise((_, reject) =>
+            params.config.abortSignal.addEventListener("abort", () =>
+              reject(new DOMException("aborted", "AbortError")),
+            ),
+          );
+        },
+      },
+    };
+    const attempts: { model: string; outcome: string; ms: number }[] = [];
+    const provider = createGeminiProvider({
+      apiKey: "k",
+      model: "primary",
+      fallbackModels: ["backup"],
+      attemptTimeoutMs: 20,
+      client,
+    });
+    await provider.analyze(input, { signal: new AbortController().signal, onAttempt: (a) => attempts.push(a) });
+    expect(attempts.map((a) => [a.model, a.outcome])).toEqual([
+      ["primary", "slow"],
+      ["backup", "ok"],
+    ]);
+    expect(attempts.every((a) => Number.isInteger(a.ms) && a.ms >= 0)).toBe(true);
   });
 
   it("does not cap the last model, which keeps the whole remaining budget", async () => {
@@ -168,7 +205,9 @@ describe("createGeminiProvider", () => {
         },
       },
     };
-    await createGeminiProvider({ apiKey: "k", model: "primary", fallbackModels: ["backup"], client }).analyze(input, live()).catch(() => {});
+    await createGeminiProvider({ apiKey: "k", model: "primary", fallbackModels: ["backup"], client })
+      .analyze(input, live())
+      .catch(() => {});
     expect(models).toEqual(["primary"]);
   });
 });

@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { AiInvalidOutputError, AiUnavailableError, type AIProvider } from "@/lib/ai/provider";
+import { AiInvalidOutputError, AiUnavailableError, type AIProvider, type AttemptLog } from "@/lib/ai/provider";
 import { RawAnalysisSchema, coerceRawAnalysis, type AnalysisResult, type RawAnalysis } from "@/lib/ai/schema";
 import { getClientIp, hashIp } from "@/lib/client-ip";
 import type { ServerConfig } from "@/lib/config";
@@ -12,7 +12,13 @@ import { signAnalysis } from "@/lib/signing";
 import type { RateLimitStore } from "@/lib/store/types";
 import { nextManilaMidnight } from "@/lib/time";
 
-export type AnalyzeResponse = { analysis: AnalysisResult; score: number; band: Band; issuedAt: string; signature: string };
+export type AnalyzeResponse = {
+  analysis: AnalysisResult;
+  score: number;
+  band: Band;
+  issuedAt: string;
+  signature: string;
+};
 
 const MIN_RETRY_BUDGET_MS = 8000;
 
@@ -64,7 +70,11 @@ export function createAnalyzeHandler({ provider, rateLimits, config, now = Date.
     if (result === "global_limit") throw fail(429, "global_limit", MESSAGES.globalLimit, { resetsAt });
   }
 
-  async function runAi(input: { resumeText: string; jobText: string }, started: number): Promise<RawAnalysis> {
+  async function runAi(
+    input: { resumeText: string; jobText: string },
+    started: number,
+    onAttempt: (attempt: AttemptLog) => void,
+  ): Promise<RawAnalysis> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), config.aiTimeoutMs);
     const deadline = started + config.aiTimeoutMs;
@@ -72,9 +82,14 @@ export function createAnalyzeHandler({ provider, rateLimits, config, now = Date.
       for (let attempt = 1; ; attempt++) {
         let output: unknown;
         try {
-          output = await provider.analyze(input, { signal: controller.signal });
+          output = await provider.analyze(input, { signal: controller.signal, onAttempt });
         } catch (error) {
-          if (error instanceof AiUnavailableError && error.retryable && attempt < 2 && deadline - now() >= MIN_RETRY_BUDGET_MS) {
+          if (
+            error instanceof AiUnavailableError &&
+            error.retryable &&
+            attempt < 2 &&
+            deadline - now() >= MIN_RETRY_BUDGET_MS
+          ) {
             continue;
           }
           if (!(error instanceof AiInvalidOutputError)) {
@@ -87,7 +102,10 @@ export function createAnalyzeHandler({ provider, rateLimits, config, now = Date.
         if (parsed.success) return parsed.data;
         if (attempt >= 2 || deadline - now() < MIN_RETRY_BUDGET_MS) {
           // Field paths only (for example "requirements.3.status"), never values.
-          const detail = parsed.error.issues.slice(0, 5).map((i) => i.path.join(".") || "(root)").join(", ");
+          const detail = parsed.error.issues
+            .slice(0, 5)
+            .map((i) => i.path.join(".") || "(root)")
+            .join(", ");
           throw new Failure(errorResponse(502, "ai_invalid_output", MESSAGES.aiInvalid), "ai_invalid_output", detail);
         }
       }
@@ -101,16 +119,18 @@ export function createAnalyzeHandler({ provider, rateLimits, config, now = Date.
     const started = now();
     let code: ErrorCode | "ok" = "ok";
     let detail: string | undefined;
+    const attempts: AttemptLog[] = [];
     try {
       const input = await readInput(req);
       const ipHash = hashIp(getClientIp(req.headers), config.ipHashSalt);
       await claimQuota(ipHash);
       let raw: RawAnalysis;
       try {
-        raw = await runAi(input, started);
+        raw = await runAi(input, started, (a) => attempts.push(a));
       } catch (error) {
         // The provider failed, not the visitor: give the quota slot back (best effort).
-        if (error instanceof Failure && error.code === "ai_unavailable") await rateLimits.refund(ipHash).catch(() => {});
+        if (error instanceof Failure && error.code === "ai_unavailable")
+          await rateLimits.refund(ipHash).catch(() => {});
         throw error;
       }
 
@@ -135,7 +155,17 @@ export function createAnalyzeHandler({ provider, rateLimits, config, now = Date.
       return errorResponse(503, "service_unavailable", MESSAGES.busy);
     } finally {
       // Never log request content: only the id, the outcome and the duration.
-      console.info(JSON.stringify({ route: "analyze", requestId, code, ...(detail ? { detail } : {}), ms: now() - started }));
+      const tried = attempts.map((a) => `${a.model}:${a.ms}:${a.outcome}`).join(",");
+      console.info(
+        JSON.stringify({
+          route: "analyze",
+          requestId,
+          code,
+          ...(detail ? { detail } : {}),
+          ...(tried ? { attempts: tried } : {}),
+          ms: now() - started,
+        }),
+      );
     }
   };
 }

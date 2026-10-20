@@ -6,7 +6,7 @@ import "server-only";
  */
 import { ApiError, GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { SYSTEM_PROMPT, buildUserPrompt } from "@/lib/ai/prompt";
-import { AiInvalidOutputError, AiUnavailableError, type AIProvider } from "@/lib/ai/provider";
+import { AiInvalidOutputError, AiUnavailableError, type AIProvider, type AttemptLog } from "@/lib/ai/provider";
 import { rawAnalysisJsonSchema } from "@/lib/ai/schema";
 
 type GenerateParams = {
@@ -50,7 +50,11 @@ export function createGeminiProvider(opts: {
   // The real client's generateContent accepts a superset of GenerateParams.
   const client: GeminiLike = opts.client ?? (new GoogleGenAI({ apiKey: opts.apiKey }) as unknown as GeminiLike);
 
-  async function call(model: string, input: Parameters<AIProvider["analyze"]>[0], signal: AbortSignal): Promise<unknown> {
+  async function call(
+    model: string,
+    input: Parameters<AIProvider["analyze"]>[0],
+    signal: AbortSignal,
+  ): Promise<unknown> {
     let text: string | undefined;
     try {
       const response = await client.models.generateContent({
@@ -88,8 +92,11 @@ export function createGeminiProvider(opts: {
 
   const models = [opts.model, ...(opts.fallbackModels ?? [])];
   return {
-    async analyze(input, { signal }) {
+    async analyze(input, { signal, onAttempt }) {
       for (let i = 0; ; i++) {
+        const startedAt = Date.now();
+        const report = (outcome: AttemptLog["outcome"]) =>
+          onAttempt?.({ model: models[i], ms: Date.now() - startedAt, outcome });
         const hasFallback = i + 1 < models.length;
         const attempt = new AbortController();
         const stop = () => attempt.abort();
@@ -97,11 +104,17 @@ export function createGeminiProvider(opts: {
         if (signal.aborted) attempt.abort();
         const timer = hasFallback && opts.attemptTimeoutMs ? setTimeout(stop, opts.attemptTimeoutMs) : undefined;
         try {
-          return await call(models[i], input, attempt.signal);
+          const output = await call(models[i], input, attempt.signal);
+          report("ok");
+          return output;
         } catch (error) {
           const slow = attempt.signal.aborted && !signal.aborted;
-          const failure = slow ? new AiUnavailableError(`Gemini model ${models[i]} was too slow`, { retryable: true }) : error;
-          const canFallBack = failure instanceof AiUnavailableError && failure.retryable && hasFallback && !signal.aborted;
+          report(slow ? "slow" : error instanceof AiInvalidOutputError ? "invalid" : "unavailable");
+          const failure = slow
+            ? new AiUnavailableError(`Gemini model ${models[i]} was too slow`, { retryable: true })
+            : error;
+          const canFallBack =
+            failure instanceof AiUnavailableError && failure.retryable && hasFallback && !signal.aborted;
           if (!canFallBack) throw failure;
         } finally {
           clearTimeout(timer);

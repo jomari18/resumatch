@@ -11,7 +11,8 @@ import { SAMPLE_JOB, SAMPLE_RESUME, jsonRequest, testConfig } from "./helpers";
 
 const NOW = Date.parse("2026-10-19T03:00:00.000Z");
 const body = { resumeText: SAMPLE_RESUME, jobText: SAMPLE_JOB };
-const post = (payload: unknown = body, ip?: string) => jsonRequest("https://resumatch.test/api/analyze", payload, { ip });
+const post = (payload: unknown = body, ip?: string) =>
+  jsonRequest("https://resumatch.test/api/analyze", payload, { ip });
 
 function setup(provider: AIProvider = createFakeProvider("ok"), config = testConfig, rateLimits?: RateLimitStore) {
   const stores = createMemoryStores({ now: () => new Date(NOW) });
@@ -22,7 +23,12 @@ function setup(provider: AIProvider = createFakeProvider("ok"), config = testCon
       return provider.analyze(input, opts);
     },
   };
-  const handler = createAnalyzeHandler({ provider: counted, rateLimits: rateLimits ?? stores.rateLimits, config, now: () => NOW });
+  const handler = createAnalyzeHandler({
+    provider: counted,
+    rateLimits: rateLimits ?? stores.rateLimits,
+    config,
+    now: () => NOW,
+  });
   return { handler, calls };
 }
 
@@ -36,7 +42,9 @@ describe("POST /api/analyze", () => {
     expect(data.score).toBe(scoreFromRequirements(data.analysis.requirements));
     expect(data.band).toBeTypeOf("string");
     expect(data.issuedAt).toBe(new Date(NOW).toISOString());
-    expect(verifyAnalysisSignature(data.analysis, data.issuedAt, data.signature, testConfig.resultSigningSecret)).toBe(true);
+    expect(verifyAnalysisSignature(data.analysis, data.issuedAt, data.signature, testConfig.resultSigningSecret)).toBe(
+      true,
+    );
   });
 
   it("rejects a too-short resume with field resumeText", async () => {
@@ -132,6 +140,24 @@ describe("POST /api/analyze", () => {
     expect(data.score).not.toBe(100);
   });
 
+  it("logs which models were tried, how long each took and how it ended", async () => {
+    const lines: string[] = [];
+    vi.spyOn(console, "info").mockImplementation((line: unknown) => void lines.push(String(line)));
+    const provider: AIProvider = {
+      analyze: async (input, opts) => {
+        opts.onAttempt?.({ model: "fast-model", ms: 14400, outcome: "slow" });
+        const out = await createFakeProvider("ok").analyze(input, opts);
+        opts.onAttempt?.({ model: "backup-model", ms: 3200, outcome: "ok" });
+        return out;
+      },
+    };
+    expect((await setup(provider).handler(post())).status).toBe(200);
+    expect(JSON.parse(lines.at(-1)!)).toMatchObject({
+      code: "ok",
+      attempts: "fast-model:14400:slow,backup-model:3200:ok",
+    });
+  });
+
   it("never logs the resume text", async () => {
     const logged: string[] = [];
     for (const level of ["log", "info", "warn", "error"] as const) {
@@ -151,13 +177,18 @@ describe("POST /api/analyze", () => {
   it("logs the provider failure reason (never user text) for ai_unavailable", async () => {
     const lines: string[] = [];
     vi.spyOn(console, "info").mockImplementation((line: unknown) => void lines.push(String(line)));
-    await setup({ analyze: async () => Promise.reject(new AiUnavailableError("Gemini API error 404")) }).handler(post());
+    await setup({ analyze: async () => Promise.reject(new AiUnavailableError("Gemini API error 404")) }).handler(
+      post(),
+    );
     const entry = JSON.parse(lines.at(-1)!);
     expect(entry).toMatchObject({ code: "ai_unavailable", detail: "Gemini API error 404" });
   });
 
   it("retries once when the provider is temporarily busy", async () => {
-    const sample = await createFakeProvider("ok").analyze({ resumeText: "", jobText: "" }, { signal: new AbortController().signal });
+    const sample = await createFakeProvider("ok").analyze(
+      { resumeText: "", jobText: "" },
+      { signal: new AbortController().signal },
+    );
     let calls = 0;
     const flaky: AIProvider = {
       analyze: async () => {
@@ -172,7 +203,12 @@ describe("POST /api/analyze", () => {
 
   it("does not retry a non-retryable provider error", async () => {
     let calls = 0;
-    const broken: AIProvider = { analyze: async () => { calls += 1; throw new AiUnavailableError("Gemini API error 400"); } };
+    const broken: AIProvider = {
+      analyze: async () => {
+        calls += 1;
+        throw new AiUnavailableError("Gemini API error 400");
+      },
+    };
     expect((await setup(broken).handler(post())).status).toBe(503);
     expect(calls).toBe(1);
   });

@@ -1,11 +1,17 @@
 export type AnalyzeInput = { resumeText: string; jobText: string };
 
+/** One model call, for logs: never contains request or response text. */
+export type AttemptLog = { model: string; ms: number; outcome: "ok" | "slow" | "unavailable" | "invalid" };
+
 /**
  * An LLM backend. It returns `unknown` on purpose: the caller validates the output with zod,
  * so no provider can pass unchecked data into the app.
  */
 export interface AIProvider {
-  analyze(input: AnalyzeInput, opts: { signal: AbortSignal }): Promise<unknown>;
+  analyze(
+    input: AnalyzeInput,
+    opts: { signal: AbortSignal; onAttempt?: (attempt: AttemptLog) => void },
+  ): Promise<unknown>;
 }
 
 /** Timeout, provider 429/5xx, or a missing key. Maps to 503 `ai_unavailable`. */
