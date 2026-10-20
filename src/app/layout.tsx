@@ -89,26 +89,6 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <div id="main" className="relative z-10 flex flex-1 flex-col">
           {children}
         </div>
-        <footer className="relative z-10">
-          <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-2 px-4 py-8 text-sm text-muted sm:flex-row sm:justify-between">
-            <p>
-              Built by{" "}
-              <a
-                className="font-semibold text-ink underline underline-offset-4"
-                href="https://jomaricandido.netlify.app"
-              >
-                Jomari M. Candido
-              </a>
-              . A portfolio project; results are guidance, not a hiring decision.
-            </p>
-            <a
-              className="font-semibold text-ink underline underline-offset-4"
-              href="https://github.com/jomari18/resumatch"
-            >
-              Source on GitHub
-            </a>
-          </div>
-        </footer>
       </body>
     </html>
   );
