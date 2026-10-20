@@ -86,4 +86,16 @@ describe("ShareButton", () => {
     expect(createShare).toHaveBeenCalledWith({ analysis, issuedAt: "2026-10-19T03:00:00.000Z", signature: "sig" });
     expect(await screen.findByRole("link", { name: "https://x/r/abcdefghijkl" })).toBeInTheDocument();
   });
+
+  it("points to the visible link when the clipboard is blocked", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(navigator.clipboard, "writeText").mockRejectedValue(new Error("denied"));
+    createShare.mockResolvedValue({
+      ok: true,
+      data: { id: "abcdefghijkl", url: "https://x/r/abcdefghijkl", expiresAt: "2026-11-18T00:00:00.000Z", created: true, deleteToken: "t" },
+    });
+    render(<ShareButton analysis={analysis} issuedAt="2026-10-19T03:00:00.000Z" signature="sig" />);
+    await user.click(screen.getByRole("button", { name: "Create share link" }));
+    expect(await screen.findByText("Copy the link above to share it.")).toBeInTheDocument();
+  });
 });

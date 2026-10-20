@@ -29,9 +29,9 @@ export function ShareButton({ analysis, issuedAt, signature }: Props) {
       await navigator.clipboard.writeText(url);
       copied = true;
     } catch {
-      // The link is still shown below.
+      // Clipboard access can be denied; the link is still shown next to the button.
     }
-    setState({ kind: "done", url, message: copied ? "Link copied to clipboard." : "Copy the link below." });
+    setState({ kind: "done", url, message: copied ? "Link copied to clipboard." : "Copy the link above to share it." });
   }
 
   return (
