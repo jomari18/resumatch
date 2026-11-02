@@ -143,3 +143,39 @@ describe("verifyEvidence hardening (final review)", () => {
     expect(out.requirements[0]).toMatchObject({ importance: "required", status: "matched", evidenceVerified: true });
   });
 });
+
+describe("verifyEvidence: what counts as naming the requirement", () => {
+  const cv = [
+    "BS Information Technology, Example State University, 2025",
+    "Built a small inventory web app using JavaScript and PostgreSQL.",
+    "Worked with the team in a busy helpdesk and fixed it fast.",
+  ].join("\n");
+  const check = (skill: string, evidence: string) =>
+    verifyEvidence(base([{ skill, importance: "required", status: "matched", evidence }]), cv).requirements[0];
+
+  it("accepts a BS degree as proof of a bachelor's degree requirement", () => {
+    expect(check("Bachelor degree in IT or a related field", "BS Information Technology, Example State University, 2025")).toMatchObject({
+      status: "matched",
+      evidenceVerified: true,
+    });
+  });
+
+  it("accepts PostgreSQL as proof of SQL database knowledge", () => {
+    expect(check("Knowledge of SQL databases", "Built a small inventory web app using JavaScript and PostgreSQL.")).toMatchObject({
+      status: "matched",
+      evidenceVerified: true,
+    });
+  });
+
+  it.each([
+    ["Experience with AWS", "Worked with the team in a busy helpdesk and fixed it fast."],
+    ["Bachelor degree in IT or a related field", "Worked with the team in a busy helpdesk and fixed it fast."],
+    ["Knowledge of Docker", "Built a small inventory web app using JavaScript and PostgreSQL."],
+  ])("does not let filler words prove %s", (skill, quote) => {
+    expect(check(skill, quote)).toMatchObject({ status: "partial", evidenceVerified: false, evidence: null });
+  });
+
+  it("does not stretch SQL to a different database family", () => {
+    expect(check("MongoDB", "Built a small inventory web app using JavaScript and PostgreSQL.")).toMatchObject({ status: "partial" });
+  });
+});

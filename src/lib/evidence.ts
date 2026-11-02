@@ -28,12 +28,33 @@ function includesWord(haystack: string, needle: string): boolean {
   return false;
 }
 
-/** A quote supports a skill only if it mentions it (any 2+ character token of the skill, or its key). */
+/** Words common to any sentence or job posting; finding one in a quote says nothing about the skill. */
+const FILLER = new Set(
+  "an and at by for in it of on or the to with ability experience familiar familiarity field good knowledge plus proficiency proficient related skill skills strong understanding use using work working year years".split(
+    " ",
+  ),
+);
+
+const DEGREES = ["bachelor", "bachelors", "b.s.", "bs", "bsc", "bscs", "bsit", "bsis", "bsba", "ba", "ab"];
+const SQL_ENGINES = ["postgresql", "postgres", "mysql", "sqlite", "mariadb", "mssql"];
+
+/** Other names a resume may use for a requirement's word. Kept short: every entry can raise a score. */
+const SAME_AS: Record<string, string[]> = {
+  bachelor: DEGREES,
+  bachelors: DEGREES,
+  degree: DEGREES,
+  sql: SQL_ENGINES,
+  database: ["sql", "mongodb", ...SQL_ENGINES],
+  databases: ["sql", "mongodb", ...SQL_ENGINES],
+};
+
+/** A quote supports a skill only if it mentions it: a meaningful 2+ character token, a known other name, or the skill's key. */
 function mentionsSkill(quote: string, skill: string): boolean {
   const tokens = normalizeForMatch(skill)
     .split(/[^a-z0-9+#]+/)
-    .filter((t) => t.length >= 2);
-  return [...tokens, skillKey(skill)].some((t) => t.length >= 2 && includesWord(quote, t));
+    .filter((t) => t.length >= 2 && !FILLER.has(t));
+  const names = tokens.flatMap((t) => [t, ...(SAME_AS[t] ?? [])]);
+  return [...names, skillKey(skill)].some((t) => t.length >= 2 && includesWord(quote, t));
 }
 
 const DOWNGRADE: Record<Exclude<Status, "missing">, Status> = { matched: "partial", partial: "missing" };

@@ -28,6 +28,9 @@ export function RequirementList({ requirements }: { requirements: Requirement[] 
               )}
             </blockquote>
           )}
+          {req.status === "partial" && !req.evidence && (
+            <p className="text-sm text-muted">Related experience, but no line in your resume names this directly</p>
+          )}
         </li>
       ))}
     </ul>

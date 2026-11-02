@@ -99,3 +99,17 @@ describe("ShareButton", () => {
     expect(await screen.findByText("Copy the link above to share it.")).toBeInTheDocument();
   });
 });
+
+describe("RequirementList without a quote", () => {
+  it("explains a partial match that has no quote, and only that", () => {
+    render(
+      <RequirementList
+        requirements={[
+          { skill: "AWS", importance: "required", status: "partial", evidence: null, evidenceVerified: false },
+          { skill: "Docker", importance: "required", status: "missing", evidence: null, evidenceVerified: false },
+        ]}
+      />,
+    );
+    expect(screen.getAllByText("Related experience, but no line in your resume names this directly")).toHaveLength(1);
+  });
+});
